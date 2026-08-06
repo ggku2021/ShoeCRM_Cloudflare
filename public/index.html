@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鞋业外贸 CRM 系统 v4.0 - 旗舰版</title>
+    <title>鞋业外贸 CRM 系统 v5.0 - 旗舰版</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -35,24 +35,24 @@
                     <div class="inline-flex p-3 bg-blue-100 text-blue-600 rounded-full mb-2">
                         <i class="fa-solid fa-shoe-prints text-3xl"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-800">鞋业外贸 CRM v4.0</h2>
-                    <p class="text-sm text-gray-500 mt-1">多账号协同 · 展会扫码 · 智能计算与模板</p>
+                    <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v5.0</h2>
+                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 算价 · 展会 · 电子PI</p>
                 </div>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">账号 / 用户名</label>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">账号 / Username</label>
                         <input type="text" v-model="loginForm.username" placeholder="默认管理员: admin / 业务员: sales1" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">密码</label>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">密码 / Password</label>
                         <input type="password" v-model="loginForm.password" placeholder="默认密码: admin123 或 123456" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     </div>
                     <div v-if="loginError" class="text-red-500 text-xs text-center">{{ loginError }}</div>
                     <button @click="handleLogin" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium shadow transition">
-                        登录系统
+                        登录系统 / Login
                     </button>
                     <div class="text-center">
-                        <button @click="enableDemoMode" class="text-xs text-slate-500 underline">单机演示模式 (不连数据库)</button>
+                        <button @click="enableDemoMode" class="text-xs text-slate-500 underline">单机演示模式 (Demo Mode)</button>
                     </div>
                 </div>
             </div>
@@ -64,42 +64,50 @@
                 <i class="fa-solid fa-shoe-prints text-2xl text-blue-400"></i>
                 <div>
                     <h1 class="font-bold text-lg leading-none">ShoeCRM Pro</h1>
-                    <span class="text-xs text-slate-400">外贸鞋业管理 v4.0</span>
+                    <span class="text-xs text-slate-400">鞋业外贸管理 v5.0</span>
                 </div>
             </div>
 
             <nav class="flex-1 space-y-1">
                 <button @click="currentTab = 'dashboard'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
-                    <i class="fa-solid fa-chart-pie w-5"></i><span>控制台看板</span>
+                    <i class="fa-solid fa-chart-pie w-5"></i><span>{{ lang === 'zh' ? '控制台看板' : 'Dashboard' }}</span>
                 </button>
                 <button @click="currentTab = 'customers'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'customers' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
-                    <i class="fa-solid fa-users w-5"></i><span>客户管理</span>
+                    <i class="fa-solid fa-users w-5"></i><span>{{ lang === 'zh' ? '客户管理' : 'Customers' }}</span>
                 </button>
                 <button @click="currentTab = 'exhibition'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:opacity-90']">
-                    <i class="fa-solid fa-qrcode w-5"></i><span>展会/看样速记</span>
+                    <i class="fa-solid fa-qrcode w-5"></i><span>{{ lang === 'zh' ? '展会/扫码速记' : 'Exhibition' }}</span>
                 </button>
                 <button @click="currentTab = 'followups'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'followups' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
                     <i class="fa-solid fa-comments w-5"></i>
-                    <span>跟进沟通</span>
+                    <span>{{ lang === 'zh' ? '跟进沟通' : 'Follow-ups' }}</span>
                     <span v-if="overdueCount > 0" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{{ overdueCount }}</span>
                 </button>
                 <button @click="currentTab = 'quotes'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'quotes' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
-                    <i class="fa-solid fa-file-invoice-dollar w-5"></i><span>报价与送样</span>
+                    <i class="fa-solid fa-file-invoice-dollar w-5"></i><span>{{ lang === 'zh' ? '报价与送样' : 'Quotes & Samples' }}</span>
                 </button>
                 <button @click="currentTab = 'products'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'products' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
-                    <i class="fa-solid fa-box-archive w-5"></i><span>鞋款库</span>
+                    <i class="fa-solid fa-box-archive w-5"></i><span>{{ lang === 'zh' ? '鞋款库' : 'Shoe Catalog' }}</span>
                 </button>
                 <button @click="currentTab = 'tools'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'tools' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
-                    <i class="fa-solid fa-calculator w-5"></i><span>外贸工具与模板</span>
+                    <i class="fa-solid fa-calculator w-5"></i><span>{{ lang === 'zh' ? '工具与模板' : 'Tools & Templates' }}</span>
                 </button>
                 <button @click="openPIModal()" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-emerald-400 hover:bg-slate-800']">
-                    <i class="fa-solid fa-file-pdf w-5"></i><span>生成外贸PI/报价单</span>
+                    <i class="fa-solid fa-file-pdf w-5"></i><span>{{ lang === 'zh' ? '生成外贸PI' : 'Create PI' }}</span>
                 </button>
             </nav>
 
             <div class="pt-4 border-t border-slate-700 text-xs text-slate-400 space-y-2">
                 <div class="flex items-center justify-between px-2 py-1">
-                    <span><i class="fa-solid fa-user-check me-1"></i> {{ currentUser.name }} ({{ currentUser.role }})</span>
+                    <button @click="toggleLang" class="text-xs bg-slate-800 px-2 py-1 rounded text-slate-300 hover:text-white">
+                        🌐 {{ lang === 'zh' ? 'English' : '中文' }}
+                    </button>
+                    <button @click="exportCSV" class="text-xs text-blue-400 hover:underline">
+                        <i class="fa-solid fa-file-csv"></i> 导出CSV
+                    </button>
+                </div>
+                <div class="flex items-center justify-between px-2 py-1 border-t border-slate-800 pt-2">
+                    <span><i class="fa-solid fa-user-check me-1"></i> {{ currentUser.name }}</span>
                     <button @click="logout" class="text-red-400 hover:underline">退出</button>
                 </div>
             </div>
@@ -112,6 +120,9 @@
                 <span class="font-bold text-base">ShoeCRM</span>
             </div>
             <div class="flex items-center gap-2">
+                <button @click="toggleLang" class="text-xs bg-slate-800 px-2 py-1 rounded">
+                    {{ lang === 'zh' ? 'EN' : '中' }}
+                </button>
                 <button @click="currentTab = 'exhibition'" class="text-xs bg-amber-600 text-white px-2 py-1 rounded flex items-center gap-1">
                     <i class="fa-solid fa-qrcode"></i> 扫码
                 </button>
@@ -125,7 +136,7 @@
             <!-- 1. 仪表盘 -->
             <div v-if="currentTab === 'dashboard'" class="space-y-6">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800">业务数据概览</h2>
+                    <h2 class="text-2xl font-bold text-gray-800">{{ lang === 'zh' ? '业务数据概览' : 'Business Dashboard' }}</h2>
                     <p class="text-sm text-gray-500">外贸鞋类客户分布与跟进状态监控</p>
                 </div>
 
@@ -219,7 +230,7 @@
                 </div>
             </div>
 
-            <!-- 2. EXHIBITION / SCANNER MODULE -->
+            <!-- EXHIBITION MODULE -->
             <div v-if="currentTab === 'exhibition'" class="space-y-6">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">展会 / 展厅现场速记与扫码选样</h2>
@@ -227,12 +238,10 @@
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Left: Camera Scanner & Quick Add -->
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
                         <h3 class="font-bold text-gray-700 flex items-center gap-2">
                             <i class="fa-solid fa-qrcode text-amber-500"></i> 扫码/选择鞋款
                         </h3>
-                        
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">选择当前意向客户 *</label>
                             <select v-model="exhibitionTargetCustomer" class="w-full border p-2 rounded bg-white text-sm">
@@ -240,7 +249,6 @@
                                 <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }} ({{ c.country }})</option>
                             </select>
                         </div>
-
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">选择/手动输入样品款号 (SKU)</label>
                             <div class="flex gap-2">
@@ -251,7 +259,6 @@
                                 <button @click="addSelectedProductToCart" class="bg-blue-600 text-white px-4 py-2 rounded text-sm whitespace-nowrap">添加</button>
                             </div>
                         </div>
-
                         <div class="pt-2 border-t">
                             <button @click="toggleCamera" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-camera"></i> {{ isCameraActive ? '关闭摄像头' : '打开手机摄像头扫码' }}
@@ -260,7 +267,6 @@
                         </div>
                     </div>
 
-                    <!-- Right: Selected Basket List -->
                     <div class="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
                         <div>
                             <div class="flex justify-between items-center mb-4">
@@ -525,11 +531,63 @@
                 </div>
             </div>
 
-            <!-- 7. 外贸工具与沟通模板 MODULE -->
+            <!-- 7. 外贸工具与工具箱 -->
             <div v-if="currentTab === 'tools'" class="space-y-6">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800">外贸实用工具箱 & 沟通模板</h2>
-                    <p class="text-sm text-gray-500">鞋类外贸计算器、国际鞋码转换与多场景英文开发信生成</p>
+                    <h2 class="text-2xl font-bold text-gray-800">外贸工具箱与报价核算</h2>
+                    <p class="text-sm text-gray-500">外贸出口报价测算、CBM集装箱配载、鞋码转换与开发信模板</p>
+                </div>
+
+                <!-- Export Price & Profit Calculator (NEW) -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
+                    <h3 class="font-bold text-gray-800 text-base border-b pb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-calculator text-emerald-600"></i> 外贸出口报价与退税测算器 (FOB Price Calculator)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                        <div>
+                            <label class="block font-medium mb-1">工厂含税出厂价 (RMB/双)</label>
+                            <input type="number" v-model.number="calcPricing.factoryCost" class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block font-medium mb-1">退税率 (%)</label>
+                            <input type="number" v-model.number="calcPricing.rebateRate" class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block font-medium mb-1">增值税率 (%)</label>
+                            <input type="number" v-model.number="calcPricing.vatRate" class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block font-medium mb-1">美金汇率 (USD/RMB)</label>
+                            <input type="number" step="0.01" v-model.number="calcPricing.exchangeRate" class="w-full border p-2 rounded">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <label class="block font-medium mb-1">港口杂费/拖车运费摊薄 (RMB/双)</label>
+                            <input type="number" step="0.1" v-model.number="calcPricing.portFee" class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block font-medium mb-1">预期利润率 (%)</label>
+                            <input type="number" v-model.number="calcPricing.margin" class="w-full border p-2 rounded">
+                        </div>
+                    </div>
+
+                    <!-- Calculator Output -->
+                    <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-lg grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                        <div>
+                            <span class="text-gray-600 block">扣除退税后实际成本：</span>
+                            <span class="text-lg font-bold text-slate-800">¥{{ calcNetCost.toFixed(2) }} / 双</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-600 block">建议保本价 (FOB USD)：</span>
+                            <span class="text-lg font-bold text-amber-600">${{ calcBreakEvenFOB.toFixed(2) }} / 双</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-600 block">推荐外贸报价 (含预期利润)：</span>
+                            <span class="text-xl font-bold text-emerald-700">${{ calcRecommendedFOB.toFixed(2) }} / 双</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -861,7 +919,7 @@
         <!-- Modals for Customer, Followup, Quote, Product -->
         <div v-if="showCustomerModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">墙报新增/编辑客户档案</h3>
+                <h3 class="text-lg font-bold text-gray-800 mb-4">新增/编辑客户档案</h3>
                 <div class="space-y-3 text-sm">
                     <div><label class="block text-xs font-semibold text-gray-600 mb-1">公司名称 *</label><input type="text" v-model="editingCustomer.company" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500"></div>
                     <div class="grid grid-cols-2 gap-2">
@@ -977,6 +1035,7 @@
         createApp({
             data() {
                 return {
+                    lang: 'zh',
                     isLoggedIn: false,
                     isDemoMode: false,
                     token: localStorage.getItem('shoecrm_token') || '',
@@ -1002,6 +1061,14 @@
                     exhibitionCart: [],
                     isCameraActive: false,
                     html5QrCode: null,
+                    calcPricing: {
+                        factoryCost: 80,
+                        rebateRate: 13,
+                        vatRate: 13,
+                        exchangeRate: 7.20,
+                        portFee: 2.5,
+                        margin: 15
+                    },
                     calcBox: {
                         length: 60,
                         width: 40,
@@ -1071,6 +1138,21 @@
                 },
                 calculatePITotalAmount() {
                     return this.piForm.items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.price) || 0), 0);
+                },
+                calcNetCost() {
+                    const cost = this.calcPricing.factoryCost;
+                    const vat = this.calcPricing.vatRate / 100;
+                    const rebate = this.calcPricing.rebateRate / 100;
+                    return (cost / (1 + vat)) * (1 + vat - rebate) + this.calcPricing.portFee;
+                },
+                calcBreakEvenFOB() {
+                    if (!this.calcPricing.exchangeRate) return 0;
+                    return this.calcNetCost / this.calcPricing.exchangeRate;
+                },
+                calcRecommendedFOB() {
+                    const breakEven = this.calcBreakEvenFOB;
+                    const margin = this.calcPricing.margin / 100;
+                    return breakEven / (1 - margin);
                 },
                 singleCBM() {
                     return (this.calcBox.length * this.calcBox.width * this.calcBox.height) / 1000000;
@@ -1159,6 +1241,21 @@ Footwear Export Co., Ltd.`;
                 }
             },
             methods: {
+                toggleLang() {
+                    this.lang = this.lang === 'zh' ? 'en' : 'zh';
+                },
+                exportCSV() {
+                    let csv = "ID,Company,Country,Contact,ContactInfo,Level,Channel,Stage\n";
+                    this.customers.forEach(c => {
+                        csv += `"${c.id}","${c.company}","${c.country}","${c.contact}","${c.contact_info}","${c.level}","${c.channel}","${c.stage}"\n`;
+                    });
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `customers_export_${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
+                },
                 async handleLogin() {
                     this.loginError = '';
                     try {
@@ -1371,7 +1468,7 @@ ${this.generatedEmailBody}`;
                     this.editingCustomer = {
                         company: '', country: '', contact: '', contact_info: '',
                         level: 'VIP', channel: '展会(广交会/华交会)', date: new Date().toISOString().split('T')[0],
-                        stage: '初次接触', preferred_styles: '', preferences: '', target_price: '',
+                        stage: '初初接触', preferred_styles: '', preferences: '', target_price: '',
                         target_market: '', moq: '', sales_rep: this.currentUser.name, notes: ''
                     };
                     this.showCustomerModal = true;
