@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鞋业外贸 CRM 系统 v5.2 - 核心功能修复版</title>
+    <title>鞋业外贸 CRM 系统 v5.3 - 高级PI导出版</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -35,8 +35,8 @@
                     <div class="inline-flex p-3 bg-blue-100 text-blue-600 rounded-full mb-2">
                         <i class="fa-solid fa-shoe-prints text-3xl"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v5.2</h2>
-                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 实时汇率 · 展会速记 · 电子PI</p>
+                    <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v5.3</h2>
+                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 预设PI配置 · 灵活排版</p>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -64,7 +64,7 @@
                 <i class="fa-solid fa-shoe-prints text-2xl text-blue-400"></i>
                 <div>
                     <h1 class="font-bold text-lg leading-none">ShoeCRM Pro</h1>
-                    <span class="text-xs text-slate-400">外贸鞋业管理 v5.2</span>
+                    <span class="text-xs text-slate-400">外贸鞋业管理 v5.3</span>
                 </div>
             </div>
 
@@ -250,7 +250,7 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">选择/手动输入样品款号 (SKU)</label>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">选择/解搜样品款号 (SKU)</label>
                             <div class="flex gap-2">
                                 <select v-model="exhibitionSelectedSKU" class="w-full border p-2 rounded bg-white text-sm">
                                     <option value="">-- 选择鞋款 --</option>
@@ -814,14 +814,20 @@
             </div>
         </div>
 
-        <!-- 电子 PI (Proforma Invoice) 生成弹窗 -->
+        <!-- 升级版电子 PI (Proforma Invoice) 生成弹窗 - 支持图片开关与鞋款下拉选择/搜索 -->
         <div v-if="showPIModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center border-b pb-3 mb-4 no-print">
+            <div class="bg-white rounded-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex flex-wrap justify-between items-center border-b pb-3 mb-4 no-print gap-2">
                     <h3 class="text-lg font-bold text-gray-800">生成外贸 Proforma Invoice (PI)</h3>
-                    <div class="flex gap-2">
-                        <button @click="printPI" class="bg-emerald-600 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-emerald-700">
-                            <i class="fa-solid fa-print me-1"></i> 打印 / 导出 PDF
+                    <div class="flex items-center gap-4">
+                        <!-- 开关：是否在PI中显示商品图片 -->
+                        <label class="inline-flex items-center cursor-pointer text-xs font-semibold text-gray-700">
+                            <input type="checkbox" v-model="piForm.showImages" class="sr-only peer">
+                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                            <span class="ml-2">显示商品缩略图</span>
+                        </label>
+                        <button @click="printPI" class="bg-emerald-600 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
+                            <i class="fa-solid fa-print"></i> 打印 / 导出 PDF
                         </button>
                         <button @click="showPIModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
                     </div>
@@ -846,7 +852,7 @@
                     <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded">
                         <div>
                             <p class="font-bold text-xs uppercase text-gray-500 mb-1">BUYER (CUSTOMER):</p>
-                            <select v-model="piForm.selectedCompany" @change="onPICompanyChange" class="w-full border p-1 rounded text-xs no-print">
+                            <select v-model="piForm.selectedCompany" @change="onPICompanyChange" class="w-full border p-1.5 rounded text-xs no-print">
                                 <option value="">-- 选择客户 --</option>
                                 <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }}</option>
                             </select>
@@ -860,21 +866,44 @@
                         </div>
                     </div>
 
+                    <!-- Add Existing Product Toolbar (No-print) -->
+                    <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-center justify-between gap-3 no-print">
+                        <span class="text-xs font-bold text-blue-800 flex items-center gap-1">
+                            <i class="fa-solid fa-boxes-packing"></i> 从鞋款库中检索添加：
+                        </span>
+                        <div class="flex-1 flex gap-2">
+                            <select v-model="selectedProductToAdd" class="w-full border p-1.5 rounded text-xs bg-white">
+                                <option value="">-- 选择现有鞋款 --</option>
+                                <option v-for="p in products" :key="p.id" :value="p">
+                                    {{ p.sku }} | {{ p.name }} (${{ p.price }})
+                                </option>
+                            </select>
+                            <button @click="addSelectedProductToPI" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium whitespace-nowrap">
+                                填入账单
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Items Table -->
                     <table class="w-full text-left border-collapse border border-gray-300 text-xs">
                         <thead>
                             <tr class="bg-gray-100">
+                                <th v-if="piForm.showImages" class="border border-gray-300 p-2 text-center w-16">Photo</th>
                                 <th class="border border-gray-300 p-2">Item / SKU</th>
                                 <th class="border border-gray-300 p-2">Description</th>
                                 <th class="border border-gray-300 p-2 text-right">Qty (Pairs)</th>
                                 <th class="border border-gray-300 p-2 text-right">Unit Price ($)</th>
                                 <th class="border border-gray-300 p-2 text-right">Total Amount ($)</th>
+                                <th class="border border-gray-300 p-2 text-center no-print w-10">操作</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="(item, idx) in piForm.items" :key="idx">
+                                <td v-if="piForm.showImages" class="border border-gray-300 p-1 text-center">
+                                    <img :src="item.image_url || 'https://via.placeholder.com/60?text=No+Pic'" class="w-12 h-12 object-cover mx-auto rounded">
+                                </td>
                                 <td class="border border-gray-300 p-2">
-                                    <input type="text" v-model="item.sku" placeholder="SKU" class="w-full border-none focus:outline-none text-xs">
+                                    <input type="text" v-model="item.sku" placeholder="SKU" class="w-full border-none focus:outline-none text-xs font-mono font-bold">
                                 </td>
                                 <td class="border border-gray-300 p-2">
                                     <input type="text" v-model="item.desc" placeholder="Description" class="w-full border-none focus:outline-none text-xs">
@@ -888,12 +917,15 @@
                                 <td class="border border-gray-300 p-2 text-right font-bold">
                                     ${{ (item.qty * item.price).toFixed(2) }}
                                 </td>
+                                <td class="border border-gray-300 p-1 text-center no-print">
+                                    <button @click="removePIItem(idx)" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
 
                     <div class="flex justify-between items-center no-print">
-                        <button @click="addPIItem" class="text-xs text-blue-600 hover:underline">+ 添加商品明细</button>
+                        <button @click="addPIItem" class="text-xs text-blue-600 hover:underline">+ 手动添加空行</button>
                     </div>
 
                     <!-- Total & Bank Info -->
@@ -984,7 +1016,7 @@
 
         <div v-if="showQuoteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">武器与样品记录</h3>
+                <h3 class="text-lg font-bold text-gray-800 mb-4">新增报价 / 样品记录</h3>
                 <div class="space-y-3 text-sm">
                     <div><label class="block text-xs font-semibold text-gray-600 mb-1">客户名称 *</label><select v-model="newQuote.company" class="w-full border p-2 rounded bg-white"><option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }}</option></select></div>
                     <div class="grid grid-cols-2 gap-2">
@@ -1085,6 +1117,7 @@
                     exhibitionCart: [],
                     isCameraActive: false,
                     html5QrCode: null,
+                    selectedProductToAdd: null,
                     calcPricing: {
                         factoryCost: 80,
                         rebateRate: 13,
@@ -1107,8 +1140,9 @@
                         date: new Date().toISOString().split('T')[0],
                         selectedCompany: '',
                         contactInfo: '',
+                        showImages: true,
                         items: [
-                            { sku: 'SKU-RN901', desc: 'Running Shoes Mesh Upper', qty: 1000, price: 16.50 }
+                            { sku: 'SKU-RN901', desc: 'Running Shoes Mesh Upper', qty: 1000, price: 16.50, image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400' }
                         ]
                     },
                     editingCustomer: {},
@@ -1355,9 +1389,19 @@ Footwear Export Co., Ltd.`;
                     const res = await fetch(url, options);
                     if (res.status === 401) {
                         this.logout();
-                        throw new Error('未授权');
+                        throw new Error('未授权或登录已过期');
                     }
-                    return res.json();
+                    const text = await res.text();
+                    let data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch(e) {
+                        throw new Error("服务器数据异常(HTTP " + res.status + "): 如果是新增字段问题，请在 D1 控制台运行以更新数据库结构: ALTER TABLE products ADD COLUMN image_url TEXT;");
+                    }
+                    if (!res.ok) {
+                        throw new Error(data.detail || data.error || '请求失败');
+                    }
+                    return data;
                 },
                 async fetchAllData() {
                     if (this.isDemoMode) return;
@@ -1460,7 +1504,8 @@ Footwear Export Co., Ltd.`;
                         sku: item.sku,
                         desc: item.name + ' (' + item.upper_material + '/' + item.sole_material + ')',
                         qty: item.qty,
-                        price: item.price
+                        price: item.price,
+                        image_url: item.image_url
                     }));
                     this.showPIModal = true;
                 },
@@ -1485,8 +1530,23 @@ Footwear Export Co., Ltd.`;
                         this.piForm.contactInfo = `${c.contact} (${c.contact_info}), ${c.country}`;
                     }
                 },
+                addSelectedProductToPI() {
+                    if (!this.selectedProductToAdd) return;
+                    const p = this.selectedProductToAdd;
+                    this.piForm.items.push({
+                        sku: p.sku,
+                        desc: p.name + ' (' + p.upper_material + '/' + p.sole_material + ')',
+                        qty: p.moq || 1000,
+                        price: p.price,
+                        image_url: p.image_url
+                    });
+                    this.selectedProductToAdd = null;
+                },
                 addPIItem() {
-                    this.piForm.items.push({ sku: '', desc: '', qty: 500, price: 10.0 });
+                    this.piForm.items.push({ sku: '', desc: '', qty: 500, price: 10.0, image_url: '' });
+                },
+                removePIItem(idx) {
+                    this.piForm.items.splice(idx, 1);
                 },
                 printPI() {
                     window.print();
