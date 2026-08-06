@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鞋业外贸 CRM 系统 - 多用户多端版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        [v-cloak] { display: none; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    </style>
+</head>
+<body class="bg-gray-100 text-slate-800 font-sans antialiased">
+    <div id="app" v-cloak class="min-h-screen flex flex-col md:flex-row">
+
+        <!-- 登录弹窗/界面 -->
+        <div v-if="!isLoggedIn" class="fixed inset-0 bg-slate-900 bg-opacity-95 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full space-y-6">
+                <div class="text-center">
+                    <div class="inline-flex p-3 bg-blue-100 text-blue-600 rounded-full mb-2">
+                        <i class="fa-solid fa-shoe-prints text-3xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-800">鞋业外贸 CRM</h2>
+                    <p class="text-sm text-gray-500 mt-1">多账号团队协同管理平台</p>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">账号 / 用户名</label>
+                        <input type="text" v-model="loginForm.username" placeholder="默认管理员: admin / 业务员: sales1" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">密码</label>
+                        <input type="password" v-model="loginForm.password" placeholder="默认密码: admin123 或 123456" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                    </div>
+                    <div v-if="loginError" class="text-red-500 text-xs text-center">{{ loginError }}</div>
+                    <button @click="handleLogin" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium shadow transition">
+                        登录系统
+                    </button>
+                    <div class="text-center">
+                        <button @click="enableDemoMode" class="text-xs text-slate-500 underline">单机演示模式 (无需服务器数据)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 桌面端侧边栏 -->
+        <aside v-if="isLoggedIn" class="hidden md:flex flex-col w-64 bg-slate-900 text-white min-h-screen p-4 space-y-6">
+            <div class="flex items-center space-x-3 px-2 py-3 border-b border-slate-700">
+                <i class="fa-solid fa-shoe-prints text-2xl text-blue-400"></i>
+                <div>
+                    <h1 class="font-bold text-lg leading-none">ShoeCRM Pro</h1>
+                    <span class="text-xs text-slate-400">鞋业外贸客户管理系统</span>
+                </div>
+            </div>
+
+            <nav class="flex-1 space-y-1">
+                <button @click="currentTab = 'dashboard'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
+                    <i class="fa-solid fa-chart-pie w-5"></i><span>控制台看板</span>
+                </button>
+                <button @click="currentTab = 'customers'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'customers' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
+                    <i class="fa-solid fa-users w-5"></i><span>客户管理</span>
+                </button>
+                <button @click="currentTab = 'followups'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'followups' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
+                    <i class="fa-solid fa-comments w-5"></i><span>跟进沟通</span>
+                </button>
+                <button @click="currentTab = 'quotes'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'quotes' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
+                    <i class="fa-solid fa-file-invoice-dollar w-5"></i><span>报价与送样</span>
+                </button>
+                <button @click="currentTab = 'products'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'products' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
+                    <i class="fa-solid fa-box-archive w-5"></i><span>鞋款库</span>
+                </button>
+            </nav>
+
+            <div class="pt-4 border-t border-slate-700 text-xs text-slate-400 space-y-2">
+                <div class="flex items-center justify-between px-2 py-1">
+                    <span><i class="fa-solid fa-user-check me-1"></i> {{ currentUser.name }} ({{ currentUser.role }})</span>
+                    <button @click="logout" class="text-red-400 hover:underline">退出</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 移动端 Header -->
+        <header v-if="isLoggedIn" class="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-30 shadow">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-shoe-prints text-xl text-blue-400"></i>
+                <span class="font-bold text-base">ShoeCRM</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-slate-300">{{ currentUser.name }}</span>
+                <button @click="logout" class="text-xs text-red-400 underline">退出</button>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main v-if="isLoggedIn" class="flex-1 p-4 md:p-8 overflow-y-auto pb-24 md:pb-8">
+            
+            <!-- 1. 仪表盘 -->
+            <div v-if="currentTab === 'dashboard'" class="space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">业务数据概览</h2>
+                    <p class="text-sm text-gray-500">外贸鞋类客户分布与跟进状态监控</p>
+                </div>
+
+                <!-- KPI 卡片 -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase">总客户数</p>
+                            <p class="text-2xl font-bold text-gray-800 mt-1">{{ customers.length }}</p>
+                        </div>
+                        <div class="p-3 bg-blue-50 rounded-lg text-blue-600">
+                            <i class="fa-solid fa-users text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase">成交/高意向</p>
+                            <p class="text-2xl font-bold text-green-600 mt-1">{{ dealCustomersCount }}</p>
+                        </div>
+                        <div class="p-3 bg-green-50 rounded-lg text-green-600">
+                            <i class="fa-solid fa-handshake text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase">跟进中项目</p>
+                            <p class="text-2xl font-bold text-amber-600 mt-1">{{ pendingFollowupsCount }}</p>
+                        </div>
+                        <div class="p-3 bg-amber-50 rounded-lg text-amber-600">
+                            <i class="fa-solid fa-clock text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase">已出样/已报价</p>
+                            <p class="text-2xl font-bold text-purple-600 mt-1">{{ quotes.length }}</p>
+                        </div>
+                        <div class="p-3 bg-purple-50 rounded-lg text-purple-600">
+                            <i class="fa-solid fa-file-invoice-dollar text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 统计图表 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-filter text-blue-500"></i> 客户阶段分布 (Customer Funnel)
+                        </h3>
+                        <div class="space-y-3">
+                            <div v-for="(count, stage) in stageStats" :key="stage" class="space-y-1">
+                                <div class="flex justify-between text-xs font-medium">
+                                    <span class="text-gray-600">{{ stage }}</span>
+                                    <span class="text-gray-800 font-bold">{{ count }} 人 ({{ Math.round((count/(customers.length||1))*100) }}%)</span>
+                                </div>
+                                <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-blue-500 h-full rounded-full transition-all duration-300" :style="{ width: ((count/(customers.length||1))*100) + '%' }"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-share-nodes text-indigo-500"></i> 获客渠道分布 (Acquisition Channels)
+                        </h3>
+                        <div class="space-y-3">
+                            <div v-for="(count, channel) in channelStats" :key="channel" class="space-y-1">
+                                <div class="flex justify-between text-xs font-medium">
+                                    <span class="text-gray-600">{{ channel }}</span>
+                                    <span class="text-gray-800 font-bold">{{ count }} 人</span>
+                                </div>
+                                <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-indigo-500 h-full rounded-full transition-all duration-300" :style="{ width: ((count/(customers.length||1))*100) + '%' }"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 客户管理 -->
+            <div v-if="currentTab === 'customers'" class="space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">客户管理档案</h2>
+                        <p class="text-sm text-gray-500">管理买家喜好、鞋款需求及交易状态</p>
+                    </div>
+                    <button @click="openCustomerModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-plus"></i> 新增客户
+                    </button>
+                </div>
+
+                <!-- 搜索与筛选 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <input type="text" v-model="searchQuery" placeholder="搜索客户名、国家、联系人..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                    <select v-model="filterLevel" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                        <option value="">所有客户等级</option>
+                        <option value="VIP">VIP</option>
+                        <option value="重点客户">重点客户</option>
+                        <option value="潜在客户">潜在客户</option>
+                        <option value="普通客户">普通客户</option>
+                        <option value="沉寂客户">沉寂客户</option>
+                    </select>
+                    <select v-model="filterStage" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                        <option value="">所有合作阶段</option>
+                        <option value="初次接触">初次接触</option>
+                        <option value="需求对接">需求对接</option>
+                        <option value="已寄样">已寄样</option>
+                        <option value="报价谈判">报价谈判</option>
+                        <option value="试单成交">试单成交</option>
+                        <option value="稳定复购">稳定复购</option>
+                    </select>
+                </div>
+
+                <!-- 客户卡片列表 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div v-for="c in filteredCustomers" :key="c.id" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-bold text-gray-800 text-base">{{ c.company }}</h3>
+                                    <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">{{ c.country }}</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-user me-1"></i>{{ c.contact }} | {{ c.contact_info }}</p>
+                            </div>
+                            <span :class="getLevelBadgeClass(c.level)" class="text-xs px-2.5 py-1 rounded-full font-semibold">
+                                {{ c.level }}
+                            </span>
+                        </div>
+
+                        <div class="space-y-1.5 text-xs text-gray-600 border-t border-b border-gray-100 py-3 my-3">
+                            <div><strong class="text-gray-700">偏好鞋款：</strong>{{ c.preferred_styles || '未标注' }}</div>
+                            <div><strong class="text-gray-700">核心需求：</strong>{{ c.preferences || '未标注' }}</div>
+                            <div><strong class="text-gray-700">目标码段/价格：</strong>{{ c.target_market }} | {{ c.target_price }}</div>
+                            <div><strong class="text-gray-700">预期起订量：</strong>{{ c.moq }}</div>
+                            <div><strong class="text-gray-700">负责人：</strong>{{ c.sales_rep || '未指派' }}</div>
+                        </div>
+
+                        <div class="flex items-center justify-between text-xs pt-1">
+                            <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded font-medium">{{ c.stage }}</span>
+                            <div class="space-x-2">
+                                <button @click="deleteCustomer(c.id)" class="text-red-600 hover:underline">删除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 跟进记录 -->
+            <div v-if="currentTab === 'followups'" class="space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">沟通与回访记录</h2>
+                        <p class="text-sm text-gray-500">跟踪买家沟通细节与下次跟进计划</p>
+                    </div>
+                    <button @click="openFollowupModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-plus"></i> 新增跟进记录
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-gray-600 font-semibold border-b">
+                                <tr>
+                                    <th class="p-3">客户名称</th>
+                                    <th class="p-3">日期/渠道</th>
+                                    <th class="p-3">沟通要点与反馈</th>
+                                    <th class="p-3">意向</th>
+                                    <th class="p-3">下次跟进/待办</th>
+                                    <th class="p-3">负责人</th>
+                                    <th class="p-3">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <tr v-for="f in followups" :key="f.id" class="hover:bg-gray-50">
+                                    <td class="p-3 font-semibold text-gray-800">{{ f.company }}</td>
+                                    <td class="p-3 text-xs text-gray-500">
+                                        <div>{{ f.date }}</div>
+                                        <span class="inline-block bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded mt-0.5">{{ f.channel }}</span>
+                                    </td>
+                                    <td class="p-3 text-gray-700 max-w-xs truncate" :title="f.notes">{{ f.notes }}</td>
+                                    <td class="p-3">
+                                        <span :class="getInterestBadgeClass(f.interest)" class="px-2 py-0.5 rounded-full text-xs font-semibold">
+                                            {{ f.interest }}
+                                        </span>
+                                    </td>
+                                    <td class="p-3 text-xs">
+                                        <div class="text-red-600 font-medium">{{ f.next_date }}</div>
+                                        <div class="text-gray-500">{{ f.action }}</div>
+                                    </td>
+                                    <td class="p-3 text-xs font-medium">{{ f.sales_rep }}</td>
+                                    <td class="p-3 text-xs space-x-2">
+                                        <button @click="deleteFollowup(f.id)" class="text-red-600 hover:underline">删除</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. 报价与样品 -->
+            <div v-if="currentTab === 'quotes'" class="space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">报价与样品跟踪</h2>
+                        <p class="text-sm text-gray-500">追踪样品寄送、报价与买家反馈</p>
+                    </div>
+                    <button @click="openQuoteModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-plus"></i> 新增报价/样品记录
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-gray-600 font-semibold border-b">
+                                <tr>
+                                    <th class="p-3">客户</th>
+                                    <th class="p-3">关联款号</th>
+                                    <th class="p-3">FOB单价</th>
+                                    <th class="p-3">预订数量</th>
+                                    <th class="p-3">快递单号</th>
+                                    <th class="p-3">状态</th>
+                                    <th class="p-3">反馈 / 原因</th>
+                                    <th class="p-3">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <tr v-for="q in quotes" :key="q.id" class="hover:bg-gray-50">
+                                    <td class="p-3 font-semibold text-gray-800">{{ q.company }}</td>
+                                    <td class="p-3"><span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono text-xs">{{ q.sku }}</span></td>
+                                    <td class="p-3 text-emerald-600 font-bold">${{ q.price }}</td>
+                                    <td class="p-3">{{ q.qty }} 双</td>
+                                    <td class="p-3 text-xs text-gray-500">{{ q.express_no || '-' }}</td>
+                                    <td class="p-3">
+                                        <span class="bg-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs font-semibold">{{ q.status }}</span>
+                                    </td>
+                                    <td class="p-3 text-xs text-gray-600">{{ q.feedback || '-' }}</td>
+                                    <td class="p-3 text-xs">
+                                        <button @click="deleteQuote(q.id)" class="text-red-600 hover:underline">删除</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. 鞋款库 -->
+            <div v-if="currentTab === 'products'" class="space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">鞋类产品与特征库</h2>
+                        <p class="text-sm text-gray-500">主推鞋款、材质工艺与对应市场匹配</p>
+                    </div>
+                    <button @click="openProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-plus"></i> 添加新鞋款
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div v-for="p in products" :key="p.id" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <span class="bg-slate-800 text-white px-2 py-0.5 rounded text-xs font-mono">{{ p.sku }}</span>
+                                <h3 class="font-bold text-gray-800 text-base mt-1">{{ p.name }}</h3>
+                            </div>
+                            <span class="text-lg font-bold text-emerald-600">${{ p.price }}</span>
+                        </div>
+                        <div class="space-y-1 text-xs text-gray-600 border-t border-b border-gray-100 py-3 my-2">
+                            <p><strong class="text-gray-700">品类：</strong>{{ p.category }}</p>
+                            <p><strong class="text-gray-700">鞋面/鞋底：</strong>{{ p.upper_material }} / {{ p.sole_material }}</p>
+                            <p><strong class="text-gray-700">起订量(MOQ)：</strong>{{ p.moq }} 双</p>
+                            <p><strong class="text-gray-700">主推市场：</strong>{{ p.target_market }}</p>
+                            <p><strong class="text-gray-700">卖点标签：</strong><span class="text-blue-600">{{ p.tags }}</span></p>
+                        </div>
+                        <div class="text-right">
+                            <button @click="deleteProduct(p.id)" class="text-xs text-red-600 hover:underline">删除鞋款</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- 移动端底部导航栏 -->
+        <nav v-if="isLoggedIn" class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-2 z-30">
+            <button @click="currentTab = 'dashboard'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'dashboard' ? 'text-blue-600 font-bold' : 'text-gray-500']">
+                <i class="fa-solid fa-chart-pie text-lg mb-0.5"></i> 看板
+            </button>
+            <button @click="currentTab = 'customers'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'customers' ? 'text-blue-600 font-bold' : 'text-gray-500']">
+                <i class="fa-solid fa-users text-lg mb-0.5"></i> 客户
+            </button>
+            <button @click="currentTab = 'followups'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'followups' ? 'text-blue-600 font-bold' : 'text-gray-500']">
+                <i class="fa-solid fa-comments text-lg mb-0.5"></i> 跟进
+            </button>
+            <button @click="currentTab = 'quotes'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'quotes' ? 'text-blue-600 font-bold' : 'text-gray-500']">
+                <i class="fa-solid fa-file-invoice-dollar text-lg mb-0.5"></i> 报价
+            </button>
+            <button @click="currentTab = 'products'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'products' ? 'text-blue-600 font-bold' : 'text-gray-500']">
+                <i class="fa-solid fa-box-archive text-lg mb-0.5"></i> 鞋款
+            </button>
+        </nav>
+
+        <!-- 弹窗组件保持相同设计 ... -->
+        <!-- Customer Modal -->
+        <div v-if="showCustomerModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">新增客户档案</h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">公司名称 *</label>
+                        <input type="text" v-model="editingCustomer.company" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">国家/地区</label>
+                            <input type="text" v-model="editingCustomer.country" class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">联系人</label>
+                            <input type="text" v-model="editingCustomer.contact" class="w-full border p-2 rounded">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">联系方式 (Email/WhatsApp)</label>
+                        <input type="text" v-model="editingCustomer.contact_info" class="w-full border p-2 rounded">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">客户等级</label>
+                            <select v-model="editingCustomer.level" class="w-full border p-2 rounded bg-white">
+                                <option>VIP</option>
+                                <option>重点客户</option>
+                                <option>潜在客户</option>
+                                <option>普通客户</option>
+                                <option>沉寂客户</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">获客渠道</label>
+                            <select v-model="editingCustomer.channel" class="w-full border p-2 rounded bg-white">
+                                <option>展会(广交会/华交会)</option>
+                                <option>阿里国际站</option>
+                                <option>Google开发</option>
+                                <option>社媒(LinkedIn/Ins)</option>
+                                <option>客户/朋友推荐</option>
+                                <option>Cold Email/其他</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">当前阶段</label>
+                            <select v-model="editingCustomer.stage" class="w-full border p-2 rounded bg-white">
+                                <option>初次接触</option>
+                                <option>需求对接</option>
+                                <option>已寄样</option>
+                                <option>报价谈判</option>
+                                <option>试单成交</option>
+                                <option>稳定复购</option>
+                                <option>流失/暂停</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">建档日期</label>
+                            <input type="date" v-model="editingCustomer.date" class="w-full border p-2 rounded">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">偏好鞋类款式</label>
+                        <input type="text" v-model="editingCustomer.preferred_styles" placeholder="如：网面跑鞋、喷泡鞋" class="w-full border p-2 rounded">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">核心需求/材质偏好</label>
+                        <input type="text" v-model="editingCustomer.preferences" placeholder="如：飞织透气、防滑大底" class="w-full border p-2 rounded">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">目标价格 (FOB USD)</label>
+                            <input type="text" v-model="editingCustomer.target_price" placeholder="$15 - $22" class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">目标码段/规格</label>
+                            <input type="text" v-model="editingCustomer.target_market" placeholder="US 7-12" class="w-full border p-2 rounded">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">预期订单量 / MOQ</label>
+                        <input type="text" v-model="editingCustomer.moq" placeholder="3,000双/季" class="w-full border p-2 rounded">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">备注</label>
+                        <textarea v-model="editingCustomer.notes" class="w-full border p-2 rounded h-16"></textarea>
+                    </div>
+                </div>
+                <div class="mt-5 flex justify-end gap-2">
+                    <button @click="showCustomerModal = false" class="px-4 py-2 border rounded-lg text-gray-600">取消</button>
+                    <button @click="saveCustomer()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Follow-up Modal -->
+        <div v-if="showFollowupModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">添加跟进记录</h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">选择客户 *</label>
+                        <select v-model="newFollowup.company" class="w-full border p-2 rounded bg-white">
+                            <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }}</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">跟进日期</label>
+                            <input type="date" v-model="newFollowup.date" class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">沟通渠道</label>
+                            <select v-model="newFollowup.channel" class="w-full border p-2 rounded bg-white">
+                                <option>WhatsApp</option>
+                                <option>Email</option>
+                                <option>电话</option>
+                                <option>展会面谈</option>
+                                <option>视频会议</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">沟通要点与客户反馈</label>
+                        <textarea v-model="newFollowup.notes" class="w-full border p-2 rounded h-20"></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">客户意向</label>
+                            <select v-model="newFollowup.interest" class="w-full border p-2 rounded bg-white">
+                                <option>高</option>
+                                <option>中</option>
+                                <option>低</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">下次跟进日期</label>
+                            <input type="date" v-model="newFollowup.next_date" class="w-full border p-2 rounded">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">待办与计划动作</label>
+                        <input type="text" v-model="newFollowup.action" placeholder="例如：寄送最新大底样品" class="w-full border p-2 rounded">
+                    </div>
+                </div>
+                <div class="mt-5 flex justify-end gap-2">
+                    <button @click="showFollowupModal = false" class="px-4 py-2 border rounded-lg text-gray-600">取消</button>
+                    <button @click="saveFollowup()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quote Modal -->
+        <div v-if="showQuoteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">薪资报价 / 样品记录</h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">客户名称 *</label>
+                        <select v-model="newQuote.company" class="w-full border p-2 rounded bg-white">
+                            <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }}</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">鞋款SKU / 款号</label>
+                            <input type="text" v-model="newQuote.sku" placeholder="SKU-RN901" class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">FOB 单价 ($)</label>
+                            <input type="number" v-model="newQuote.price" class="w-full border p-2 rounded">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">预订数量 (双)</label>
+                            <input type="number" v-model="newQuote.qty" class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">状态</label>
+                            <select v-model="newQuote.status" class="w-full border p-2 rounded bg-white">
+                                <option>已发送报价</option>
+                                <option>样品寄送中</option>
+                                <option>样品已签收</option>
+                                <option>反馈修改中</option>
+                                <option>已下试单</option>
+                                <option>报价失效</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">快递单号 (如已寄送样品)</label>
+                        <input type="text" v-model="newQuote.express_no" placeholder="DHL / FedEx 单号" class="w-full border p-2 rounded">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">客户反馈 / 备注</label>
+                        <textarea v-model="newQuote.feedback" class="w-full border p-2 rounded h-16"></textarea>
+                    </div>
+                </div>
+                <div class="mt-5 flex justify-end gap-2">
+                    <button @click="showQuoteModal = false" class="px-4 py-2 border rounded-lg text-gray-600">取消</button>
+                    <button @click="saveQuote()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Modal -->
+        <div v-if="showProductModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">添加新鞋款</h3>
+                <div class="space-y-3 text-sm">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">款号 (SKU) *</label>
+                            <input type="text" v-model="newProduct.sku" placeholder="SKU-XXXX" class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">鞋款名称 *</label>
+                            <input type="text" v-model="newProduct.name" placeholder="产品名称" class="w-full border p-2 rounded">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">品类</label>
+                            <input type="text" v-model="newProduct.category" placeholder="专业跑鞋/休闲鞋..." class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">参考FOB单价 ($)</label>
+                            <input type="number" v-model="newProduct.price" class="w-full border p-2 rounded">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">鞋面材质</label>
+                            <input type="text" v-model="newProduct.upper_material" placeholder="透气飞织/真皮..." class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">鞋底材质</label>
+                            <input type="text" v-model="newProduct.sole_material" placeholder="MD+橡胶/EVA..." class="w-full border p-2 rounded">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">起订量 (MOQ/双)</label>
+                            <input type="number" v-model="newProduct.moq" class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">主推目标市场</label>
+                            <input type="text" v-model="newProduct.target_market" placeholder="欧美/中东/南美..." class="w-full border p-2 rounded">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">卖点标签</label>
+                        <input type="text" v-model="newProduct.tags" placeholder="防滑、减震、轻盈..." class="w-full border p-2 rounded">
+                    </div>
+                </div>
+                <div class="mt-5 flex justify-end gap-2">
+                    <button @click="showProductModal = false" class="px-4 py-2 border rounded-lg text-gray-600">取消</button>
+                    <button @click="saveProduct()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    isLoggedIn: false,
+                    isDemoMode: false,
+                    token: localStorage.getItem('shoecrm_token') || '',
+                    currentUser: JSON.parse(localStorage.getItem('shoecrm_user') || '{}'),
+                    loginForm: { username: '', password: '' },
+                    loginError: '',
+                    currentTab: 'dashboard',
+                    searchQuery: '',
+                    filterLevel: '',
+                    filterStage: '',
+                    showCustomerModal: false,
+                    showFollowupModal: false,
+                    showQuoteModal: false,
+                    showProductModal: false,
+                    editingCustomer: {},
+                    newFollowup: {},
+                    newQuote: {},
+                    newProduct: {},
+                    customers: [],
+                    followups: [],
+                    quotes: [],
+                    products: []
+                }
+            },
+            computed: {
+                filteredCustomers() {
+                    return this.customers.filter(c => {
+                        const matchesSearch = !this.searchQuery || 
+                            (c.company && c.company.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                            (c.country && c.country.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                            (c.contact && c.contact.toLowerCase().includes(this.searchQuery.toLowerCase()));
+                        const matchesLevel = !this.filterLevel || c.level === this.filterLevel;
+                        const matchesStage = !this.filterStage || c.stage === this.filterStage;
+                        return matchesSearch && matchesLevel && matchesStage;
+                    });
+                },
+                dealCustomersCount() {
+                    return this.customers.filter(c => c.stage === '试单成交' || c.stage === '稳定复购').length;
+                },
+                pendingFollowupsCount() {
+                    return this.followups.filter(f => f.status !== '已完成').length;
+                },
+                stageStats() {
+                    const stats = {};
+                    this.customers.forEach(c => {
+                        if (c.stage) stats[c.stage] = (stats[c.stage] || 0) + 1;
+                    });
+                    return stats;
+                },
+                channelStats() {
+                    const stats = {};
+                    this.customers.forEach(c => {
+                        if (c.channel) stats[c.channel] = (stats[c.channel] || 0) + 1;
+                    });
+                    return stats;
+                }
+            },
+            mounted() {
+                if (this.token) {
+                    this.isLoggedIn = true;
+                    this.fetchAllData();
+                }
+            },
+            methods: {
+                async handleLogin() {
+                    this.loginError = '';
+                    try {
+                        const res = await fetch('/api/auth/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.loginForm)
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            this.token = data.token;
+                            this.currentUser = data.user;
+                            localStorage.setItem('shoecrm_token', data.token);
+                            localStorage.setItem('shoecrm_user', JSON.stringify(data.user));
+                            this.isLoggedIn = true;
+                            this.fetchAllData();
+                        } else {
+                            this.loginError = data.detail || '登录失败';
+                        }
+                    } catch (e) {
+                        this.loginError = '无法连接服务端，请确认后端已启动。';
+                    }
+                },
+                enableDemoMode() {
+                    this.isDemoMode = true;
+                    this.isLoggedIn = true;
+                    this.currentUser = { name: '演示用户', role: 'admin' };
+                    this.customers = [
+                        { id: 1, company: 'Global Footwear Ltd', country: '美国', contact: 'John Smith', contact_info: 'john@globalfootwear.com', level: 'VIP', channel: '展会(广交会/华交会)', date: '2025-10-15', stage: '政治订单', preferred_styles: '网面跑鞋', preferences: '网布透气', target_price: '$15 - $22', target_market: 'US 7-12', moq: '3,000双/季', sales_rep: '张经理', notes: '对品质要求高' }
+                    ];
+                },
+                logout() {
+                    this.token = '';
+                    this.isLoggedIn = false;
+                    localStorage.removeItem('shoecrm_token');
+                    localStorage.removeItem('shoecrm_user');
+                },
+                async apiFetch(url, options = {}) {
+                    options.headers = {
+                        ...options.headers,
+                        'Authorization': 'Bearer ' + this.token,
+                        'Content-Type': 'index/json'
+                    };
+                    if (options.body && typeof options.body === 'object') {
+                        options.body = JSON.stringify(options.body);
+                    }
+                    const res = await fetch(url, options);
+                    if (res.status === 401) {
+                        this.logout();
+                        throw new Error('未授权');
+                    }
+                    return res.json();
+                },
+                async fetchAllData() {
+                    try {
+                        this.customers = await this.apiFetch('/api/customers');
+                        this.followups = await this.apiFetch('/api/followups');
+                        this.quotes = await this.apiFetch('/api/quotes');
+                        this.products = await this.apiFetch('/api/products');
+                    } catch (e) {
+                        console.error('Data loading error', e);
+                    }
+                },
+                getLevelBadgeClass(level) {
+                    if (level === 'VIP') return 'bg-purple-100 text-purple-800';
+                    if (level === '重点客户') return 'bg-red-100 text-red-800';
+                    if (level === '潜在客户') return 'bg-blue-100 text-blue-800';
+                    return 'bg-gray-100 text-gray-800';
+                },
+                getInterestBadgeClass(interest) {
+                    if (interest === '高') return 'bg-emerald-100 text-emerald-800';
+                    if (interest === '中') return 'bg-yellow-100 text-yellow-800';
+                    return 'bg-gray-100 text-gray-800';
+                },
+                openCustomerModal() {
+                    this.editingCustomer = {
+                        company: '', country: '', contact: '', contact_info: '',
+                        level: 'VIP', channel: '展会(广交会/华交会)', date: new Date().toISOString().split('T')[0],
+                        stage: '初次接触', preferred_styles: '', preferences: '', target_price: '',
+                        target_market: '', moq: '', sales_rep: this.currentUser.name, notes: ''
+                    };
+                    this.showCustomerModal = true;
+                },
+                async saveCustomer() {
+                    if (!this.editingCustomer.company) return alert('请填写公司名称！');
+                    await this.apiFetch('/api/customers', { method: 'POST', body: this.editingCustomer });
+                    this.showCustomerModal = false;
+                    this.fetchAllData();
+                },
+                async deleteCustomer(id) {
+                    if (confirm('确定要删除该客户吗？')) {
+                        await this.apiFetch('/api/customers/' + id, { method: 'DELETE' });
+                        this.fetchAllData();
+                    }
+                },
+                openFollowupModal() {
+                    this.newFollowup = {
+                        company: this.customers[0] ? this.customers[0].company : '',
+                        date: new Date().toISOString().split('T')[0],
+                        channel: 'WhatsApp', notes: '', interest: '中', next_date: '', action: '', status: '进行中', sales_rep: this.currentUser.name
+                    };
+                    this.showFollowupModal = true;
+                },
+                async saveFollowup() {
+                    await this.apiFetch('/api/followups', { method: 'POST', body: this.newFollowup });
+                    this.showFollowupModal = false;
+                    this.fetchAllData();
+                },
+                async deleteFollowup(id) {
+                    if (confirm('确定删除此跟进记录吗？')) {
+                        await this.apiFetch('/api/followups/' + id, { method: 'DELETE' });
+                        this.fetchAllData();
+                    }
+                },
+                openQuoteModal() {
+                    this.newQuote = {
+                        company: this.customers[0] ? this.customers[0].company : '',
+                        date: new Date().toISOString().split('T')[0],
+                        sku: '', price: 0, qty: 1000, express_no: '', status: '已发送报价', feedback: '', sales_rep: this.currentUser.name
+                    };
+                    this.showQuoteModal = true;
+                },
+                async saveQuote() {
+                    await this.apiFetch('/api/quotes', { method: 'POST', body: this.newQuote });
+                    this.showQuoteModal = false;
+                    this.fetchAllData();
+                },
+                async deleteQuote(id) {
+                    if (confirm('确定删除此报价记录吗？')) {
+                        await this.apiFetch('/api/quotes/' + id, { method: 'DELETE' });
+                        this.fetchAllData();
+                    }
+                },
+                openProductModal() {
+                    this.newProduct = {
+                        sku: 'SKU-', name: '', category: '运动鞋', upper_material: '',
+                        sole_material: '', price: 0, moq: 1000, target_market: '', tags: ''
+                    };
+                    this.showProductModal = true;
+                },
+                async saveProduct() {
+                    await this.apiFetch('/api/products', { method: 'POST', body: this.newProduct });
+                    this.showProductModal = false;
+                    this.fetchAllData();
+                },
+                async deleteProduct(id) {
+                    if (confirm('确定删除此鞋款吗？')) {
+                        await this.apiFetch('/api/products/' + id, { method: 'DELETE' });
+                        this.fetchAllData();
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
