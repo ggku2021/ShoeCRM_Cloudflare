@@ -3,15 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鞋业外贸 CRM 系统 - 多用户多端版</title>
+    <title>鞋业外贸 CRM 系统 v2.0 - 智能多端版</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Vue.js 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
         [v-cloak] { display: none; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        @media print {
+            body * { visibility: hidden; }
+            #pi-printable, #pi-printable * { visibility: visible; }
+            #pi-printable { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-slate-800 font-sans antialiased">
@@ -24,8 +33,8 @@
                     <div class="inline-flex p-3 bg-blue-100 text-blue-600 rounded-full mb-2">
                         <i class="fa-solid fa-shoe-prints text-3xl"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-800">鞋业外贸 CRM</h2>
-                    <p class="text-sm text-gray-500 mt-1">多账号团队协同管理平台</p>
+                    <h2 class="text-2xl font-bold text-gray-800">鞋业外贸 CRM v2.0</h2>
+                    <p class="text-sm text-gray-500 mt-1">多账号协同 · 智能推款 · 电子PI生成</p>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -41,7 +50,7 @@
                         登录系统
                     </button>
                     <div class="text-center">
-                        <button @click="enableDemoMode" class="text-xs text-slate-500 underline">单机演示模式 (无需服务器数据)</button>
+                        <button @click="enableDemoMode" class="text-xs text-slate-500 underline">单机演示模式 (不连数据库)</button>
                     </div>
                 </div>
             </div>
@@ -53,7 +62,7 @@
                 <i class="fa-solid fa-shoe-prints text-2xl text-blue-400"></i>
                 <div>
                     <h1 class="font-bold text-lg leading-none">ShoeCRM Pro</h1>
-                    <span class="text-xs text-slate-400">鞋业外贸客户管理系统</span>
+                    <span class="text-xs text-slate-400">外贸鞋业管理 v2.0</span>
                 </div>
             </div>
 
@@ -65,13 +74,18 @@
                     <i class="fa-solid fa-users w-5"></i><span>客户管理</span>
                 </button>
                 <button @click="currentTab = 'followups'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'followups' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
-                    <i class="fa-solid fa-comments w-5"></i><span>跟进沟通</span>
+                    <i class="fa-solid fa-comments w-5"></i>
+                    <span>跟进沟通</span>
+                    <span v-if="overdueCount > 0" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{{ overdueCount }}</span>
                 </button>
                 <button @click="currentTab = 'quotes'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'quotes' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
                     <i class="fa-solid fa-file-invoice-dollar w-5"></i><span>报价与送样</span>
                 </button>
                 <button @click="currentTab = 'products'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'products' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
                     <i class="fa-solid fa-box-archive w-5"></i><span>鞋款库</span>
+                </button>
+                <button @click="openPIModal()" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-emerald-400 hover:bg-slate-800']">
+                    <i class="fa-solid fa-file-pdf w-5"></i><span>生成外贸PI/报价单</span>
                 </button>
             </nav>
 
@@ -89,8 +103,10 @@
                 <i class="fa-solid fa-shoe-prints text-xl text-blue-400"></i>
                 <span class="font-bold text-base">ShoeCRM</span>
             </div>
-            <div class="flex items-center gap-3">
-                <span class="text-xs text-slate-300">{{ currentUser.name }}</span>
+            <div class="flex items-center gap-2">
+                <button @click="openPIModal()" class="text-xs bg-emerald-600 hover:bg-emerald-700 px-2 py-1 rounded">
+                    <i class="fa-solid fa-file-pdf"></i> 生成PI
+                </button>
                 <button @click="logout" class="text-xs text-red-400 underline">退出</button>
             </div>
         </header>
@@ -103,6 +119,18 @@
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">业务数据概览</h2>
                     <p class="text-sm text-gray-500">外贸鞋类客户分布与跟进状态监控</p>
+                </div>
+
+                <!-- Alert for Overdue -->
+                <div v-if="overdueCount > 0" class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-triangle-exclamation text-red-500 text-xl"></i>
+                        <div>
+                            <p class="font-bold text-red-800 text-sm">提醒：有 {{ overdueCount }} 个超期未跟进事项！</p>
+                            <p class="text-xs text-red-600">请及时处理跟进任务，避免客户流失。</p>
+                        </div>
+                    </div>
+                    <button @click="currentTab = 'followups'" class="bg-red-600 text-white text-xs px-3 py-1.5 rounded-lg font-medium hover:bg-red-700">查看跟进</button>
                 </div>
 
                 <!-- KPI 卡片 -->
@@ -127,7 +155,7 @@
                     </div>
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                         <div>
-                            <p class="text-xs font-semibold text-gray-400 uppercase">跟进中项目</p>
+                            <p class="text-xs font-semibold text-gray-400 uppercase">待跟进/超期</p>
                             <p class="text-2xl font-bold text-amber-600 mt-1">{{ pendingFollowupsCount }}</p>
                         </div>
                         <div class="p-3 bg-amber-50 rounded-lg text-amber-600">
@@ -219,33 +247,41 @@
 
                 <!-- 客户卡片列表 -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div v-for="c in filteredCustomers" :key="c.id" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition">
-                        <div class="flex justify-between items-start mb-3">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h3 class="font-bold text-gray-800 text-base">{{ c.company }}</h3>
-                                    <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">{{ c.country }}</span>
+                    <div v-for="c in filteredCustomers" :key="c.id" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="font-bold text-gray-800 text-base">{{ c.company }}</h3>
+                                        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">{{ c.country }}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-user me-1"></i>{{ c.contact }} | {{ c.contact_info }}</p>
                                 </div>
-                                <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-user me-1"></i>{{ c.contact }} | {{ c.contact_info }}</p>
+                                <span :class="getLevelBadgeClass(c.level)" class="text-xs px-2.5 py-1 rounded-full font-semibold">
+                                    {{ c.level }}
+                                </span>
                             </div>
-                            <span :class="getLevelBadgeClass(c.level)" class="text-xs px-2.5 py-1 rounded-full font-semibold">
-                                {{ c.level }}
-                            </span>
+
+                            <div class="space-y-1.5 text-xs text-gray-600 border-t border-b border-gray-100 py-3 my-3">
+                                <div><strong class="text-gray-700">偏好鞋款：</strong>{{ c.preferred_styles || '未标注' }}</div>
+                                <div><strong class="text-gray-700">核心需求：</strong>{{ c.preferences || '未标注' }}</div>
+                                <div><strong class="text-gray-700">目标码段/价格：</strong>{{ c.target_market }} | {{ c.target_price }}</div>
+                                <div><strong class="text-gray-700">预期起订量：</strong>{{ c.moq }}</div>
+                                <div><strong class="text-gray-700">负责人：</strong>{{ c.sales_rep || '未指派' }}</div>
+                            </div>
                         </div>
 
-                        <div class="space-y-1.5 text-xs text-gray-600 border-t border-b border-gray-100 py-3 my-3">
-                            <div><strong class="text-gray-700">偏好鞋款：</strong>{{ c.preferred_styles || '未标注' }}</div>
-                            <div><strong class="text-gray-700">核心需求：</strong>{{ c.preferences || '未标注' }}</div>
-                            <div><strong class="text-gray-700">目标码段/价格：</strong>{{ c.target_market }} | {{ c.target_price }}</div>
-                            <div><strong class="text-gray-700">预期起订量：</strong>{{ c.moq }}</div>
-                            <div><strong class="text-gray-700">负责人：</strong>{{ c.sales_rep || '未指派' }}</div>
-                        </div>
-
-                        <div class="flex items-center justify-between text-xs pt-1">
-                            <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded font-medium">{{ c.stage }}</span>
-                            <div class="space-x-2">
-                                <button @click="deleteCustomer(c.id)" class="text-red-600 hover:underline">删除</button>
+                        <div>
+                            <div class="flex items-center justify-between text-xs pt-1 mb-3">
+                                <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded font-medium">{{ c.stage }}</span>
+                                <div class="space-x-2">
+                                    <button @click="deleteCustomer(c.id)" class="text-red-600 hover:underline">删除</button>
+                                </div>
                             </div>
+                            <!-- 智能匹配鞋款按钮 -->
+                            <button @click="showSmartMatch(c)" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 shadow-sm hover:opacity-90">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> 智能匹配推荐鞋款
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -291,7 +327,9 @@
                                         </span>
                                     </td>
                                     <td class="p-3 text-xs">
-                                        <div class="text-red-600 font-medium">{{ f.next_date }}</div>
+                                        <div :class="isOverdue(f.next_date) ? 'text-red-600 font-bold' : 'text-gray-600'">
+                                            {{ f.next_date }} <span v-if="isOverdue(f.next_date)">(已超期)</span>
+                                        </div>
                                         <div class="text-gray-500">{{ f.action }}</div>
                                     </td>
                                     <td class="p-3 text-xs font-medium">{{ f.sales_rep }}</td>
@@ -367,11 +405,12 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div v-for="p in products" :key="p.id" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition">
+                        <div class="relative h-48 w-full bg-gray-100 rounded-lg overflow-hidden mb-3">
+                            <img :src="p.image_url || 'https://via.placeholder.com/300x200?text=No+Image'" class="w-full h-full object-cover">
+                            <span class="absolute top-2 left-2 bg-slate-900/80 text-white px-2 py-0.5 rounded text-xs font-mono">{{ p.sku }}</span>
+                        </div>
                         <div class="flex justify-between items-start mb-2">
-                            <div>
-                                <span class="bg-slate-800 text-white px-2 py-0.5 rounded text-xs font-mono">{{ p.sku }}</span>
-                                <h3 class="font-bold text-gray-800 text-base mt-1">{{ p.name }}</h3>
-                            </div>
+                            <h3 class="font-bold text-gray-800 text-base">{{ p.name }}</h3>
                             <span class="text-lg font-bold text-emerald-600">${{ p.price }}</span>
                         </div>
                         <div class="space-y-1 text-xs text-gray-600 border-t border-b border-gray-100 py-3 my-2">
@@ -390,116 +429,172 @@
 
         </main>
 
-        <!-- 移动端底部导航栏 -->
-        <nav v-if="isLoggedIn" class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-2 z-30">
-            <button @click="currentTab = 'dashboard'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'dashboard' ? 'text-blue-600 font-bold' : 'text-gray-500']">
-                <i class="fa-solid fa-chart-pie text-lg mb-0.5"></i> 看板
-            </button>
-            <button @click="currentTab = 'customers'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'customers' ? 'text-blue-600 font-bold' : 'text-gray-500']">
-                <i class="fa-solid fa-users text-lg mb-0.5"></i> 客户
-            </button>
-            <button @click="currentTab = 'followups'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'followups' ? 'text-blue-600 font-bold' : 'text-gray-500']">
-                <i class="fa-solid fa-comments text-lg mb-0.5"></i> 跟进
-            </button>
-            <button @click="currentTab = 'quotes'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'quotes' ? 'text-blue-600 font-bold' : 'text-gray-500']">
-                <i class="fa-solid fa-file-invoice-dollar text-lg mb-0.5"></i> 报价
-            </button>
-            <button @click="currentTab = 'products'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'products' ? 'text-blue-600 font-bold' : 'text-gray-500']">
-                <i class="fa-solid fa-box-archive text-lg mb-0.5"></i> 鞋款
-            </button>
-        </nav>
+        <!-- 智能匹配弹窗 -->
+        <div v-if="showMatchModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">
+                        为 <span class="text-blue-600">{{ selectedMatchCustomer.company }}</span> 智能推荐鞋款
+                    </h3>
+                    <button @click="showMatchModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div class="bg-blue-50 p-3 rounded-lg text-xs text-blue-800 mb-4">
+                    <p><strong>客户喜好偏好：</strong>{{ selectedMatchCustomer.preferred_styles }} / {{ selectedMatchCustomer.preferences }}</p>
+                    <p><strong>目标价位：</strong>{{ selectedMatchCustomer.target_price }} | <strong>目标市场：</strong>{{ selectedMatchCustomer.target_market }}</p>
+                </div>
+                <div class="space-y-3">
+                    <h4 class="font-bold text-sm text-gray-700">匹配到的鞋款：</h4>
+                    <div v-for="p in matchedProducts" :key="p.id" class="flex items-center gap-4 p-3 border rounded-lg bg-gray-50">
+                        <img :src="p.image_url" class="w-16 h-16 object-cover rounded">
+                        <div class="flex-1 text-xs">
+                            <p class="font-bold text-sm text-gray-800">{{ p.name }} ({{ p.sku }})</p>
+                            <p class="text-gray-500">材质：{{ p.upper_material }} | 价格：${{ p.price }} | MOQ: {{ p.moq }}双</p>
+                            <p class="text-blue-600 mt-1">卖点：{{ p.tags }}</p>
+                        </div>
+                        <button @click="quickAddQuote(selectedMatchCustomer.company, p.sku, p.price)" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs">生成报价记录</button>
+                    </div>
+                    <div v-if="matchedProducts.length === 0" class="text-center py-6 text-gray-400">暂无高度匹配的鞋款，请在鞋款库中添加更多产品。</div>
+                </div>
+            </div>
+        </div>
 
-        <!-- 弹窗组件保持相同设计 ... -->
-        <!-- Customer Modal -->
+        <!-- 电子 PI (Proforma Invoice) 生成弹窗 -->
+        <div v-if="showPIModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center border-b pb-3 mb-4 no-print">
+                    <h3 class="text-lg font-bold text-gray-800">生成外贸 Proforma Invoice (PI)</h3>
+                    <div class="flex gap-2">
+                        <button @click="printPI" class="bg-emerald-600 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-emerald-700">
+                            <i class="fa-solid fa-print me-1"></i> 打印 / 导出 PDF
+                        </button>
+                        <button @click="showPIModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                    </div>
+                </div>
+
+                <!-- Printable Area -->
+                <div id="pi-printable" class="p-6 bg-white border border-gray-200 rounded text-gray-800 text-sm space-y-4">
+                    <div class="flex justify-between items-start border-b-2 border-slate-800 pb-4">
+                        <div>
+                            <h1 class="text-2xl font-bold text-slate-900">PROFORMA INVOICE</h1>
+                            <p class="text-xs text-gray-500">PROFORMA INVOICE NO: {{ piForm.piNumber }}</p>
+                            <p class="text-xs text-gray-500">DATE: {{ piForm.date }}</p>
+                        </div>
+                        <div class="text-right text-xs">
+                            <p class="font-bold text-sm">FOOTWEAR EXPORT CO., LTD.</p>
+                            <p>Jinjiang, Quanzhou, Fujian, China</p>
+                            <p>Email: sales@footwearexport.com</p>
+                        </div>
+                    </div>
+
+                    <!-- Buyer & Terms Selection (No-print for selects) -->
+                    <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded">
+                        <div>
+                            <p class="font-bold text-xs uppercase text-gray-500 mb-1">BUYER (CUSTOMER):</p>
+                            <select v-model="piForm.selectedCompany" @change="onPICompanyChange" class="w-full border p-1 rounded text-xs no-print">
+                                <option value="">-- 选择客户 --</option>
+                                <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }}</option>
+                            </select>
+                            <p class="font-bold text-slate-800 mt-1">{{ piForm.selectedCompany || '[Customer Name]' }}</p>
+                            <p class="text-xs text-gray-600">{{ piForm.contactInfo }}</p>
+                        </div>
+                        <div>
+                            <p class="font-bold text-xs uppercase text-gray-500 mb-1">TERMS & CONDITIONS:</p>
+                            <p class="text-xs">Price Term: <strong>FOB XIAMEN / SHENZHEN</strong></p>
+                            <p class="text-xs">Payment: <strong>30% T/T Deposit, 70% Before Shipment</strong></p>
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    <table class="w-full text-left border-collapse border border-gray-300 text-xs">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border border-gray-300 p-2">Item / SKU</th>
+                                <th class="border border-gray-300 p-2">Description</th>
+                                <th class="border border-gray-300 p-2 text-right">Qty (Pairs)</th>
+                                <th class="border border-gray-300 p-2 text-right">Unit Price ($)</th>
+                                <th class="border border-gray-300 p-2 text-right">Total Amount ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(item, idx) in piForm.items" :key="idx">
+                                <td class="border border-gray-300 p-2">
+                                    <input type="text" v-model="item.sku" placeholder="SKU" class="w-full border-none focus:outline-none text-xs">
+                                </td>
+                                <td class="border border-gray-300 p-2">
+                                    <input type="text" v-model="item.desc" placeholder="Description" class="w-full border-none focus:outline-none text-xs">
+                                </td>
+                                <td class="border border-gray-300 p-2 text-right">
+                                    <input type="number" v-model.number="item.qty" class="w-20 text-right border-none focus:outline-none text-xs">
+                                </td>
+                                <td class="border border-gray-300 p-2 text-right">
+                                    <input type="number" step="0.1" v-model.number="item.price" class="w-20 text-right border-none focus:outline-none text-xs">
+                                </td>
+                                <td class="border border-gray-300 p-2 text-right font-bold">
+                                    ${{ (item.qty * item.price).toFixed(2) }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="flex justify-between items-center no-print">
+                        <button @click="addPIItem" class="text-xs text-blue-600 hover:underline">+ 添加商品明细</button>
+                    </div>
+
+                    <!-- Total & Bank Info -->
+                    <div class="flex justify-between pt-2 border-t">
+                        <div class="text-xs space-y-1 w-1/2">
+                            <p class="font-bold">BANK DETAILS FOR PAYMENT:</p>
+                            <p>Bank Name: HSBC Hong Kong</p>
+                            <p>Account Name: FOOWTEAR EXPORT LIMITED</p>
+                            <p>SWIFT Code: HSBCHKHHXXX</p>
+                        </div>
+                        <div class="text-right text-sm">
+                            <p class="text-gray-600">Total Quantity: <strong class="text-slate-900">{{ calculatePITotalQty }} Pairs</strong></p>
+                            <p class="text-lg font-bold text-emerald-600">TOTAL AMOUNT: ${{ calculatePITotalAmount.toFixed(2) }} USD</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-8 flex justify-between text-xs">
+                        <div>
+                            <p>Issued By: ___________________</p>
+                            <p class="text-gray-400 mt-1">Authorized Signature</p>
+                        </div>
+                        <div>
+                            <p>Confirmed By: ___________________</p>
+                            <p class="text-gray-400 mt-1">Buyer Signature</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals for Customer, Followup, Quote, Product (Same as before) -->
         <div v-if="showCustomerModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">新增客户档案</h3>
+                <h3 class="text-lg font-bold text-gray-800 mb-4">新增/编辑客户档案</h3>
                 <div class="space-y-3 text-sm">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">公司名称 *</label>
-                        <input type="text" v-model="editingCustomer.company" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500" required>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">公司名称 *</label><input type="text" v-model="editingCustomer.company" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500"></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">国家/地区</label><input type="text" v-model="editingCustomer.country" class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">联系人</label><input type="text" v-model="editingCustomer.contact" class="w-full border p-2 rounded"></div>
+                    </div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">联系方式 (Email/WhatsApp)</label><input type="text" v-model="editingCustomer.contact_info" class="w-full border p-2 rounded"></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">客户等级</label><select v-model="editingCustomer.level" class="w-full border p-2 rounded bg-white"><option>VIP</option><option>重点客户</option><option>潜在客户</option><option>普通客户</option><option>沉寂客户</option></select></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">获客渠道</label><select v-model="editingCustomer.channel" class="w-full border p-2 rounded bg-white"><option>展会(广交会/华交会)</option><option>阿里国际站</option><option>Google开发</option><option>社媒(LinkedIn/Ins)</option><option>客户/朋友推荐</option><option>Cold Email/其他</option></select></div>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">国家/地区</label>
-                            <input type="text" v-model="editingCustomer.country" class="w-full border p-2 rounded">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">联系人</label>
-                            <input type="text" v-model="editingCustomer.contact" class="w-full border p-2 rounded">
-                        </div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">当前阶段</label><select v-model="editingCustomer.stage" class="w-full border p-2 rounded bg-white"><option>初次接触</option><option>需求对接</option><option>已寄样</option><option>报价谈判</option><option>试单成交</option><option>稳定复购</option><option>流失/暂停</option></select></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">建档日期</label><input type="date" v-model="editingCustomer.date" class="w-full border p-2 rounded"></div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">联系方式 (Email/WhatsApp)</label>
-                        <input type="text" v-model="editingCustomer.contact_info" class="w-full border p-2 rounded">
-                    </div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">偏好鞋类款式</label><input type="text" v-model="editingCustomer.preferred_styles" placeholder="如：网面跑鞋、喷泡鞋" class="w-full border p-2 rounded"></div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">核心需求/材质偏好</label><input type="text" v-model="editingCustomer.preferences" placeholder="如：飞织透气、防滑大底" class="w-full border p-2 rounded"></div>
                     <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">客户等级</label>
-                            <select v-model="editingCustomer.level" class="w-full border p-2 rounded bg-white">
-                                <option>VIP</option>
-                                <option>重点客户</option>
-                                <option>潜在客户</option>
-                                <option>普通客户</option>
-                                <option>沉寂客户</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">获客渠道</label>
-                            <select v-model="editingCustomer.channel" class="w-full border p-2 rounded bg-white">
-                                <option>展会(广交会/华交会)</option>
-                                <option>阿里国际站</option>
-                                <option>Google开发</option>
-                                <option>社媒(LinkedIn/Ins)</option>
-                                <option>客户/朋友推荐</option>
-                                <option>Cold Email/其他</option>
-                            </select>
-                        </div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">目标价格 (FOB USD)</label><input type="text" v-model="editingCustomer.target_price" placeholder="$15 - $22" class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">目标码段/规格</label><input type="text" v-model="editingCustomer.target_market" placeholder="US 7-12" class="w-full border p-2 rounded"></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">当前阶段</label>
-                            <select v-model="editingCustomer.stage" class="w-full border p-2 rounded bg-white">
-                                <option>初次接触</option>
-                                <option>需求对接</option>
-                                <option>已寄样</option>
-                                <option>报价谈判</option>
-                                <option>试单成交</option>
-                                <option>稳定复购</option>
-                                <option>流失/暂停</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">建档日期</label>
-                            <input type="date" v-model="editingCustomer.date" class="w-full border p-2 rounded">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">偏好鞋类款式</label>
-                        <input type="text" v-model="editingCustomer.preferred_styles" placeholder="如：网面跑鞋、喷泡鞋" class="w-full border p-2 rounded">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">核心需求/材质偏好</label>
-                        <input type="text" v-model="editingCustomer.preferences" placeholder="如：飞织透气、防滑大底" class="w-full border p-2 rounded">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">目标价格 (FOB USD)</label>
-                            <input type="text" v-model="editingCustomer.target_price" placeholder="$15 - $22" class="w-full border p-2 rounded">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">目标码段/规格</label>
-                            <input type="text" v-model="editingCustomer.target_market" placeholder="US 7-12" class="w-full border p-2 rounded">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">预期订单量 / MOQ</label>
-                        <input type="text" v-model="editingCustomer.moq" placeholder="3,000双/季" class="w-full border p-2 rounded">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">备注</label>
-                        <textarea v-model="editingCustomer.notes" class="w-full border p-2 rounded h-16"></textarea>
-                    </div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">预期订单量 / MOQ</label><input type="text" v-model="editingCustomer.moq" placeholder="3,000双/季" class="w-full border p-2 rounded"></div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">备注</label><textarea v-model="editingCustomer.notes" class="w-full border p-2 rounded h-16"></textarea></div>
                 </div>
                 <div class="mt-5 flex justify-end gap-2">
                     <button @click="showCustomerModal = false" class="px-4 py-2 border rounded-lg text-gray-600">取消</button>
@@ -508,55 +603,21 @@
             </div>
         </div>
 
-        <!-- Follow-up Modal -->
         <div v-if="showFollowupModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
                 <h3 class="text-lg font-bold text-gray-800 mb-4">添加跟进记录</h3>
                 <div class="space-y-3 text-sm">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">选择客户 *</label>
-                        <select v-model="newFollowup.company" class="w-full border p-2 rounded bg-white">
-                            <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }}</option>
-                        </select>
-                    </div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">选择客户 *</label><select v-model="newFollowup.company" class="w-full border p-2 rounded bg-white"><option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }}</option></select></div>
                     <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">跟进日期</label>
-                            <input type="date" v-model="newFollowup.date" class="w-full border p-2 rounded">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">沟通渠道</label>
-                            <select v-model="newFollowup.channel" class="w-full border p-2 rounded bg-white">
-                                <option>WhatsApp</option>
-                                <option>Email</option>
-                                <option>电话</option>
-                                <option>展会面谈</option>
-                                <option>视频会议</option>
-                            </select>
-                        </div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">跟进日期</label><input type="date" v-model="newFollowup.date" class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">沟通渠道</label><select v-model="newFollowup.channel" class="w-full border p-2 rounded bg-white"><option>WhatsApp</option><option>Email</option><option>电话</option><option>展会面谈</option><option>视频会议</option></select></div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">沟通要点与客户反馈</label>
-                        <textarea v-model="newFollowup.notes" class="w-full border p-2 rounded h-20"></textarea>
-                    </div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">沟通要点与客户反馈</label><textarea v-model="newFollowup.notes" class="w-full border p-2 rounded h-20"></textarea></div>
                     <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">客户意向</label>
-                            <select v-model="newFollowup.interest" class="w-full border p-2 rounded bg-white">
-                                <option>高</option>
-                                <option>中</option>
-                                <option>低</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">下次跟进日期</label>
-                            <input type="date" v-model="newFollowup.next_date" class="w-full border p-2 rounded">
-                        </div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">客户意向</label><select v-model="newFollowup.interest" class="w-full border p-2 rounded bg-white"><option>高</option><option>中</option><option>低</option></select></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">下次跟进日期</label><input type="date" v-model="newFollowup.next_date" class="w-full border p-2 rounded"></div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">待办与计划动作</label>
-                        <input type="text" v-model="newFollowup.action" placeholder="例如：寄送最新大底样品" class="w-full border p-2 rounded">
-                    </div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">待办与计划动作</label><input type="text" v-model="newFollowup.action" placeholder="例如：寄送画册" class="w-full border p-2 rounded"></div>
                 </div>
                 <div class="mt-5 flex justify-end gap-2">
                     <button @click="showFollowupModal = false" class="px-4 py-2 border rounded-lg text-gray-600">取消</button>
@@ -565,52 +626,21 @@
             </div>
         </div>
 
-        <!-- Quote Modal -->
         <div v-if="showQuoteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">薪资报价 / 样品记录</h3>
+                <h3 class="text-lg font-bold text-gray-800 mb-4">新增报价 / 样品记录</h3>
                 <div class="space-y-3 text-sm">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">客户名称 *</label>
-                        <select v-model="newQuote.company" class="w-full border p-2 rounded bg-white">
-                            <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }}</option>
-                        </select>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">客户名称 *</label><select v-model="newQuote.company" class="w-full border p-2 rounded bg-white"><option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }}</option></select></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">鞋款SKU / 款号</label><input type="text" v-model="newQuote.sku" placeholder="SKU-RN901" class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">FOB 单价 ($)</label><input type="number" v-model="newQuote.price" class="w-full border p-2 rounded"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">鞋款SKU / 款号</label>
-                            <input type="text" v-model="newQuote.sku" placeholder="SKU-RN901" class="w-full border p-2 rounded">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">FOB 单价 ($)</label>
-                            <input type="number" v-model="newQuote.price" class="w-full border p-2 rounded">
-                        </div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">预订数量 (双)</label><input type="number" v-model="newQuote.qty" class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">状态</label><select v-model="newQuote.status" class="w-full border p-2 rounded bg-white"><option>已发送报价</option><option>样品寄送中</option><option>样品已签收</option><option>反馈修改中</option><option>已下试单</option><option>报价失效</option></select></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">预订数量 (双)</label>
-                            <input type="number" v-model="newQuote.qty" class="w-full border p-2 rounded">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">状态</label>
-                            <select v-model="newQuote.status" class="w-full border p-2 rounded bg-white">
-                                <option>已发送报价</option>
-                                <option>样品寄送中</option>
-                                <option>样品已签收</option>
-                                <option>反馈修改中</option>
-                                <option>已下试单</option>
-                                <option>报价失效</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">快递单号 (如已寄送样品)</label>
-                        <input type="text" v-model="newQuote.express_no" placeholder="DHL / FedEx 单号" class="w-full border p-2 rounded">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">客户反馈 / 备注</label>
-                        <textarea v-model="newQuote.feedback" class="w-full border p-2 rounded h-16"></textarea>
-                    </div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">快递单号 (如已寄送样品)</label><input type="text" v-model="newQuote.express_no" placeholder="DHL / FedEx 单号" class="w-full border p-2 rounded"></div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">客户反馈 / 备注</label><textarea v-model="newQuote.feedback" class="w-full border p-2 rounded h-16"></textarea></div>
                 </div>
                 <div class="mt-5 flex justify-end gap-2">
                     <button @click="showQuoteModal = false" class="px-4 py-2 border rounded-lg text-gray-600">取消</button>
@@ -619,55 +649,28 @@
             </div>
         </div>
 
-        <!-- Product Modal -->
         <div v-if="showProductModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
                 <h3 class="text-lg font-bold text-gray-800 mb-4">添加新鞋款</h3>
                 <div class="space-y-3 text-sm">
                     <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">款号 (SKU) *</label>
-                            <input type="text" v-model="newProduct.sku" placeholder="SKU-XXXX" class="w-full border p-2 rounded">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">鞋款名称 *</label>
-                            <input type="text" v-model="newProduct.name" placeholder="产品名称" class="w-full border p-2 rounded">
-                        </div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">款号 (SKU) *</label><input type="text" v-model="newProduct.sku" placeholder="SKU-XXXX" class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">鞋款名称 *</label><input type="text" v-model="newProduct.name" placeholder="产品名称" class="w-full border p-2 rounded"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">品类</label>
-                            <input type="text" v-model="newProduct.category" placeholder="专业跑鞋/休闲鞋..." class="w-full border p-2 rounded">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">参考FOB单价 ($)</label>
-                            <input type="number" v-model="newProduct.price" class="w-full border p-2 rounded">
-                        </div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">品类</label><input type="text" v-model="newProduct.category" placeholder="专业跑鞋/休闲鞋..." class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">参考FOB单价 ($)</label><input type="number" v-model="newProduct.price" class="w-full border p-2 rounded"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">鞋面材质</label>
-                            <input type="text" v-model="newProduct.upper_material" placeholder="透气飞织/真皮..." class="w-full border p-2 rounded">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">鞋底材质</label>
-                            <input type="text" v-model="newProduct.sole_material" placeholder="MD+橡胶/EVA..." class="w-full border p-2 rounded">
-                        </div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">鞋面材质</label><input type="text" v-model="newProduct.upper_material" placeholder="透气飞织/真皮..." class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">鞋底材质</label><input type="text" v-model="newProduct.sole_material" placeholder="MD+橡胶/EVA..." class="w-full border p-2 rounded"></div>
                     </div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">图片链接 (URL)</label><input type="text" v-model="newProduct.image_url" placeholder="https://..." class="w-full border p-2 rounded"></div>
                     <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">起订量 (MOQ/双)</label>
-                            <input type="number" v-model="newProduct.moq" class="w-full border p-2 rounded">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">主推目标市场</label>
-                            <input type="text" v-model="newProduct.target_market" placeholder="欧美/中东/南美..." class="w-full border p-2 rounded">
-                        </div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">起订量 (MOQ/双)</label><input type="number" v-model="newProduct.moq" class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">主推目标市场</label><input type="text" v-model="newProduct.target_market" placeholder="欧美/中东/南美..." class="w-full border p-2 rounded"></div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">卖点标签</label>
-                        <input type="text" v-model="newProduct.tags" placeholder="防滑、减震、轻盈..." class="w-full border p-2 rounded">
-                    </div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">卖点标签</label><input type="text" v-model="newProduct.tags" placeholder="防滑、减震、轻盈..." class="w-full border p-2 rounded"></div>
                 </div>
                 <div class="mt-5 flex justify-end gap-2">
                     <button @click="showProductModal = false" class="px-4 py-2 border rounded-lg text-gray-600">取消</button>
@@ -698,6 +701,19 @@
                     showFollowupModal: false,
                     showQuoteModal: false,
                     showProductModal: false,
+                    showMatchModal: false,
+                    showPIModal: false,
+                    selectedMatchCustomer: {},
+                    matchedProducts: [],
+                    piForm: {
+                        piNumber: 'PI-' + Math.floor(100000 + Math.random() * 900000),
+                        date: new Date().toISOString().split('T')[0],
+                        selectedCompany: '',
+                        contactInfo: '',
+                        items: [
+                            { sku: 'SKU-RN901', desc: 'Running Shoes Mesh Upper', qty: 1000, price: 16.50 }
+                        ]
+                    },
                     editingCustomer: {},
                     newFollowup: {},
                     newQuote: {},
@@ -726,6 +742,10 @@
                 pendingFollowupsCount() {
                     return this.followups.filter(f => f.status !== '已完成').length;
                 },
+                overdueCount() {
+                    const today = new Date().toISOString().split('T')[0];
+                    return this.followups.filter(f => f.status !== '已完成' && f.next_date && f.next_date < today).length;
+                },
                 stageStats() {
                     const stats = {};
                     this.customers.forEach(c => {
@@ -739,6 +759,12 @@
                         if (c.channel) stats[c.channel] = (stats[c.channel] || 0) + 1;
                     });
                     return stats;
+                },
+                calculatePITotalQty() {
+                    return this.piForm.items.reduce((acc, item) => acc + (Number(item.qty) || 0), 0);
+                },
+                calculatePITotalAmount() {
+                    return this.piForm.items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.price) || 0), 0);
                 }
             },
             mounted() {
@@ -776,7 +802,16 @@
                     this.isLoggedIn = true;
                     this.currentUser = { name: '演示用户', role: 'admin' };
                     this.customers = [
-                        { id: 1, company: 'Global Footwear Ltd', country: '美国', contact: 'John Smith', contact_info: 'john@globalfootwear.com', level: 'VIP', channel: '展会(广交会/华交会)', date: '2025-10-15', stage: '政治订单', preferred_styles: '网面跑鞋', preferences: '网布透气', target_price: '$15 - $22', target_market: 'US 7-12', moq: '3,000双/季', sales_rep: '张经理', notes: '对品质要求高' }
+                        { id: 1, company: 'Global Footwear Ltd', country: '美国', contact: 'John Smith', contact_info: 'john@globalfootwear.com', level: 'VIP', channel: '展会(广交会/华交会)', date: '2025-10-15', stage: '稳定复购', preferred_styles: '跑鞋', preferences: '透气飞织', target_price: '$15 - $22', target_market: 'US 7-12', moq: '3,000双/季', sales_rep: '张经理', notes: '对品质要求高' }
+                    ];
+                    this.products = [
+                        { id: 1, sku: 'SKU-RN901', name: '超轻飞织高弹跑步鞋', category: '跑鞋', upper_material: '透气飞织', sole_material: 'MD+橡胶', price: 16.5, moq: 1000, target_market: '北美', tags: '透气轻盈, 跑鞋', image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400' }
+                    ];
+                    this.followups = [
+                        { id: 1, company: 'Global Footwear Ltd', date: '2026-07-15', channel: 'WhatsApp', notes: '沟通2027精选款', interest: '高', next_date: '2026-08-01', action: '寄送样品', status: '进行中', sales_rep: '张经理' }
+                    ];
+                    this.quotes = [
+                        { id: 1, company: 'Global Footwear Ltd', date: '2026-07-18', sku: 'SKU-RN901', price: 16.5, qty: 3000, express_no: 'DHL123', status: '已发送报价', feedback: '评估中', sales_rep: '张经理' }
                     ];
                 },
                 logout() {
@@ -789,7 +824,7 @@
                     options.headers = {
                         ...options.headers,
                         'Authorization': 'Bearer ' + this.token,
-                        'Content-Type': 'index/json'
+                        'Content-Type': 'application/json'
                     };
                     if (options.body && typeof options.body === 'object') {
                         options.body = JSON.stringify(options.body);
@@ -802,6 +837,7 @@
                     return res.json();
                 },
                 async fetchAllData() {
+                    if (this.isDemoMode) return;
                     try {
                         this.customers = await this.apiFetch('/api/customers');
                         this.followups = await this.apiFetch('/api/followups');
@@ -810,6 +846,11 @@
                     } catch (e) {
                         console.error('Data loading error', e);
                     }
+                },
+                isOverdue(dateStr) {
+                    if (!dateStr) return false;
+                    const today = new Date().toISOString().split('T')[0];
+                    return dateStr < today;
                 },
                 getLevelBadgeClass(level) {
                     if (level === 'VIP') return 'bg-purple-100 text-purple-800';
@@ -822,6 +863,49 @@
                     if (interest === '中') return 'bg-yellow-100 text-yellow-800';
                     return 'bg-gray-100 text-gray-800';
                 },
+                showSmartMatch(customer) {
+                    this.selectedMatchCustomer = customer;
+                    const pref = (customer.preferred_styles + ' ' + customer.preferences + ' ' + customer.target_market).toLowerCase();
+                    this.matchedProducts = this.products.filter(p => {
+                        const tags = (p.category + ' ' + p.name + ' ' + p.tags + ' ' + p.upper_material).toLowerCase();
+                        return pref.split(/[,\s]+/).some(tag => tag && tags.includes(tag));
+                    });
+                    if (this.matchedProducts.length === 0) {
+                        this.matchedProducts = this.products.slice(0, 3);
+                    }
+                    this.showMatchModal = true;
+                },
+                openPIModal() {
+                    this.showPIModal = true;
+                },
+                onPICompanyChange() {
+                    const c = this.customers.find(item => item.company === this.piForm.selectedCompany);
+                    if (c) {
+                        this.piForm.contactInfo = `${c.contact} (${c.contact_info}), ${c.country}`;
+                    }
+                },
+                addPIItem() {
+                    this.piForm.items.push({ sku: '', desc: '', qty: 500, price: 10.0 });
+                },
+                printPI() {
+                    window.print();
+                },
+                quickAddQuote(company, sku, price) {
+                    this.newQuote = {
+                        company: company,
+                        date: new Date().toISOString().split('T')[0],
+                        sku: sku,
+                        price: price,
+                        qty: 1000,
+                        express_no: '',
+                        status: '已发送报价',
+                        feedback: '智能推荐匹配',
+                        sales_rep: this.currentUser.name
+                    };
+                    this.saveQuote();
+                    this.showMatchModal = false;
+                    alert('已自动创建报价记录！');
+                },
                 openCustomerModal() {
                     this.editingCustomer = {
                         company: '', country: '', contact: '', contact_info: '',
@@ -833,14 +917,22 @@
                 },
                 async saveCustomer() {
                     if (!this.editingCustomer.company) return alert('请填写公司名称！');
-                    await this.apiFetch('/api/customers', { method: 'POST', body: this.editingCustomer });
+                    if (this.isDemoMode) {
+                        this.customers.unshift({ id: Date.now(), ...this.editingCustomer });
+                    } else {
+                        await this.apiFetch('/api/customers', { method: 'POST', body: this.editingCustomer });
+                        this.fetchAllData();
+                    }
                     this.showCustomerModal = false;
-                    this.fetchAllData();
                 },
                 async deleteCustomer(id) {
                     if (confirm('确定要删除该客户吗？')) {
-                        await this.apiFetch('/api/customers/' + id, { method: 'DELETE' });
-                        this.fetchAllData();
+                        if (this.isDemoMode) {
+                            this.customers = this.customers.filter(x => x.id !== id);
+                        } else {
+                            await this.apiFetch('/api/customers/' + id, { method: 'DELETE' });
+                            this.fetchAllData();
+                        }
                     }
                 },
                 openFollowupModal() {
@@ -852,14 +944,22 @@
                     this.showFollowupModal = true;
                 },
                 async saveFollowup() {
-                    await this.apiFetch('/api/followups', { method: 'POST', body: this.newFollowup });
+                    if (this.isDemoMode) {
+                        this.followups.unshift({ id: Date.now(), ...this.newFollowup });
+                    } else {
+                        await this.apiFetch('/api/followups', { method: 'POST', body: this.newFollowup });
+                        this.fetchAllData();
+                    }
                     this.showFollowupModal = false;
-                    this.fetchAllData();
                 },
                 async deleteFollowup(id) {
                     if (confirm('确定删除此跟进记录吗？')) {
-                        await this.apiFetch('/api/followups/' + id, { method: 'DELETE' });
-                        this.fetchAllData();
+                        if (this.isDemoMode) {
+                            this.followups = this.followups.filter(x => x.id !== id);
+                        } else {
+                            await this.apiFetch('/api/followups/' + id, { method: 'DELETE' });
+                            this.fetchAllData();
+                        }
                     }
                 },
                 openQuoteModal() {
@@ -871,32 +971,49 @@
                     this.showQuoteModal = true;
                 },
                 async saveQuote() {
-                    await this.apiFetch('/api/quotes', { method: 'POST', body: this.newQuote });
+                    if (this.isDemoMode) {
+                        this.quotes.unshift({ id: Date.now(), ...this.newQuote });
+                    } else {
+                        await this.apiFetch('/api/quotes', { method: 'POST', body: this.newQuote });
+                        this.fetchAllData();
+                    }
                     this.showQuoteModal = false;
-                    this.fetchAllData();
                 },
                 async deleteQuote(id) {
                     if (confirm('确定删除此报价记录吗？')) {
-                        await this.apiFetch('/api/quotes/' + id, { method: 'DELETE' });
-                        this.fetchAllData();
+                        if (this.isDemoMode) {
+                            this.quotes = this.quotes.filter(x => x.id !== id);
+                        } else {
+                            await this.apiFetch('/api/quotes/' + id, { method: 'DELETE' });
+                            this.fetchAllData();
+                        }
                     }
                 },
                 openProductModal() {
                     this.newProduct = {
-                        sku: 'SKU-', name: '', category: '运动鞋', upper_material: '',
-                        sole_material: '', price: 0, moq: 1000, target_market: '', tags: ''
+                        sku: 'SKU-', name: '', category: '跑鞋', upper_material: '',
+                        sole_material: '', price: 0, moq: 1000, target_market: '', tags: '',
+                        image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400'
                     };
                     this.showProductModal = true;
                 },
                 async saveProduct() {
-                    await this.apiFetch('/api/products', { method: 'POST', body: this.newProduct });
+                    if (this.isDemoMode) {
+                        this.products.unshift({ id: Date.now(), ...this.newProduct });
+                    } else {
+                        await this.apiFetch('/api/products', { method: 'POST', body: this.newProduct });
+                        this.fetchAllData();
+                    }
                     this.showProductModal = false;
-                    this.fetchAllData();
                 },
                 async deleteProduct(id) {
                     if (confirm('确定删除此鞋款吗？')) {
-                        await this.apiFetch('/api/products/' + id, { method: 'DELETE' });
-                        this.fetchAllData();
+                        if (this.isDemoMode) {
+                            this.products = this.products.filter(x => x.id !== id);
+                        } else {
+                            await this.apiFetch('/api/products/' + id, { method: 'DELETE' });
+                            this.fetchAllData();
+                        }
                     }
                 }
             }
