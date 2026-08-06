@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鞋业外贸 CRM 系统 v2.0 - 智能多端版</title>
+    <title>鞋业外贸 CRM 系统 v3.0 - 展会扫码与速记版</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Vue.js 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- HTML5 QR Code Scanner -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         [v-cloak] { display: none; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -17,8 +19,8 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
         @media print {
             body * { visibility: hidden; }
-            #pi-printable, #pi-printable * { visibility: visible; }
-            #pi-printable { position: absolute; left: 0; top: 0; width: 100%; }
+            #pi-printable, #pi-printable *, #tag-printable, #tag-printable * { visibility: visible; }
+            #pi-printable, #tag-printable { position: absolute; left: 0; top: 0; width: 100%; }
             .no-print { display: none !important; }
         }
     </style>
@@ -33,8 +35,8 @@
                     <div class="inline-flex p-3 bg-blue-100 text-blue-600 rounded-full mb-2">
                         <i class="fa-solid fa-shoe-prints text-3xl"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-800">鞋业外贸 CRM v2.0</h2>
-                    <p class="text-sm text-gray-500 mt-1">多账号协同 · 智能推款 · 电子PI生成</p>
+                    <h2 class="text-2xl font-bold text-gray-800">鞋业外贸 CRM v3.0</h2>
+                    <p class="text-sm text-gray-500 mt-1">多账号协同 · 展会扫码 · 电子PI生成</p>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -62,7 +64,7 @@
                 <i class="fa-solid fa-shoe-prints text-2xl text-blue-400"></i>
                 <div>
                     <h1 class="font-bold text-lg leading-none">ShoeCRM Pro</h1>
-                    <span class="text-xs text-slate-400">外贸鞋业管理 v2.0</span>
+                    <span class="text-xs text-slate-400">外贸鞋业管理 v3.0</span>
                 </div>
             </div>
 
@@ -72,6 +74,9 @@
                 </button>
                 <button @click="currentTab = 'customers'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'customers' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
                     <i class="fa-solid fa-users w-5"></i><span>客户管理</span>
+                </button>
+                <button @click="currentTab = 'exhibition'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:opacity-90']">
+                    <i class="fa-solid fa-qrcode w-5"></i><span>展会/看样速记</span>
                 </button>
                 <button @click="currentTab = 'followups'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'followups' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
                     <i class="fa-solid fa-comments w-5"></i>
@@ -104,8 +109,8 @@
                 <span class="font-bold text-base">ShoeCRM</span>
             </div>
             <div class="flex items-center gap-2">
-                <button @click="openPIModal()" class="text-xs bg-emerald-600 hover:bg-emerald-700 px-2 py-1 rounded">
-                    <i class="fa-solid fa-file-pdf"></i> 生成PI
+                <button @click="currentTab = 'exhibition'" class="text-xs bg-amber-600 text-white px-2 py-1 rounded flex items-center gap-1">
+                    <i class="fa-solid fa-qrcode"></i> 扫码选样
                 </button>
                 <button @click="logout" class="text-xs text-red-400 underline">退出</button>
             </div>
@@ -211,6 +216,97 @@
                 </div>
             </div>
 
+            <!-- EXHIBITION / SCANNER MODULE -->
+            <div v-if="currentTab === 'exhibition'" class="space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">展会 / 展厅现场速记与扫码选样</h2>
+                    <p class="text-sm text-gray-500">扫码或选择款号，快速记录买家意向看样清单并生成报价</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left: Camera Scanner & Quick Add -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
+                        <h3 class="font-bold text-gray-700 flex items-center gap-2">
+                            <i class="fa-solid fa-qrcode text-amber-500"></i> 扫码/选择鞋款
+                        </h3>
+                        
+                        <!-- Select Target Customer -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">选择当前意向客户 *</label>
+                            <select v-model="exhibitionTargetCustomer" class="w-full border p-2 rounded bg-white text-sm">
+                                <option value="">-- 请选择现有客户或新建 --</option>
+                                <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }} ({{ c.country }})</option>
+                            </select>
+                        </div>
+
+                        <!-- Manual SKU Search / Selector -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">选择/手动输入样品款号 (SKU)</label>
+                            <div class="flex gap-2">
+                                <select v-model="exhibitionSelectedSKU" class="w-full border p-2 rounded bg-white text-sm">
+                                    <option value="">-- 拖动选择鞋款 --</option>
+                                    <option v-for="p in products" :key="p.id" :value="p.sku">{{ p.sku }} - {{ p.name }} (${{ p.price }})</option>
+                                </select>
+                                <button @click="addSelectedProductToCart" class="bg-blue-600 text-white px-4 py-2 rounded text-sm whitespace-nowrap">添加</button>
+                            </div>
+                        </div>
+
+                        <!-- Scanner Trigger -->
+                        <div class="pt-2 border-t">
+                            <button @click="toggleCamera" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-camera"></i> {{ isCameraActive ? '关闭摄像头' : '打开手机摄像头扫码' }}
+                            </button>
+                            <div id="reader" class="mt-3 overflow-hidden rounded-lg"></div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Selected Basket List -->
+                    <div class="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-gray-700 flex items-center gap-2">
+                                    <i class="fa-solid fa-basket-shopping text-blue-500"></i> 当前客户选样清单 ({{ exhibitionCart.length }}件)
+                                </h3>
+                                <button v-if="exhibitionCart.length > 0" @click="exhibitionCart = []" class="text-xs text-red-500 hover:underline">清空</button>
+                            </div>
+
+                            <div v-if="exhibitionCart.length === 0" class="text-center py-12 text-gray-400">
+                                <i class="fa-solid fa-barcode text-4xl mb-2 block"></i>
+                                暂无选样鞋款，请在左侧选择款号或使用摄像头扫描鞋款吊牌二维码。
+                            </div>
+
+                            <div class="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                                <div v-for="(item, idx) in exhibitionCart" :key="idx" class="flex items-center justify-between p-3 border rounded-lg bg-slate-50">
+                                    <div class="flex items-center gap-3">
+                                        <img :src="item.image_url" class="w-12 h-12 object-cover rounded">
+                                        <div>
+                                            <p class="font-bold text-sm text-gray-800">{{ item.name }} ({{ item.sku }})</p>
+                                            <p class="text-xs text-gray-500">材质：{{ item.upper_material }} | 参考价：${{ item.price }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-xs text-gray-500">数盘(双):</span>
+                                            <input type="number" v-model.number="item.qty" class="w-16 border p-1 text-center rounded text-xs">
+                                        </div>
+                                        <button @click="exhibitionCart.splice(idx, 1)" class="text-red-500 text-sm hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="exhibitionCart.length > 0" class="pt-4 border-t mt-4 flex flex-wrap gap-2 justify-end">
+                            <button @click="batchCreateQuotes" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                生成系统报价单记录
+                            </button>
+                            <button @click="openPIFromExhibition" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                直接生成正式PI (PDF)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 2. 客户管理 -->
             <div v-if="currentTab === 'customers'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -278,7 +374,6 @@
                                     <button @click="deleteCustomer(c.id)" class="text-red-600 hover:underline">删除</button>
                                 </div>
                             </div>
-                            <!-- 智能匹配鞋款按钮 -->
                             <button @click="showSmartMatch(c)" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 shadow-sm hover:opacity-90">
                                 <i class="fa-solid fa-wand-magic-sparkles"></i> 智能匹配推荐鞋款
                             </button>
@@ -396,7 +491,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h2 class="text-2xl font-bold text-gray-800">鞋类产品与特征库</h2>
-                        <p class="text-sm text-gray-500">主推鞋款、材质工艺与对应市场匹配</p>
+                        <p class="text-sm text-gray-500">主推鞋款、材质工艺与展会样品标签生成</p>
                     </div>
                     <button @click="openProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
                         <i class="fa-solid fa-plus"></i> 添加新鞋款
@@ -420,7 +515,10 @@
                             <p><strong class="text-gray-700">主推市场：</strong>{{ p.target_market }}</p>
                             <p><strong class="text-gray-700">卖点标签：</strong><span class="text-blue-600">{{ p.tags }}</span></p>
                         </div>
-                        <div class="text-right">
+                        <div class="flex items-center justify-between pt-1">
+                            <button @click="showQRTag(p)" class="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded hover:bg-amber-100 flex items-center gap-1">
+                                <i class="fa-solid fa-qrcode"></i> 样品二维码标签
+                            </button>
                             <button @click="deleteProduct(p.id)" class="text-xs text-red-600 hover:underline">删除鞋款</button>
                         </div>
                     </div>
@@ -428,6 +526,45 @@
             </div>
 
         </main>
+
+        <!-- 移动端底部导航栏 -->
+        <nav v-if="isLoggedIn" class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-2 z-30">
+            <button @click="currentTab = 'dashboard'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'dashboard' ? 'text-blue-600 font-bold' : 'text-gray-500']">
+                <i class="fa-solid fa-chart-pie text-lg mb-0.5"></i> 看板
+            </button>
+            <button @click="currentTab = 'customers'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'customers' ? 'text-blue-600 font-bold' : 'text-gray-500']">
+                <i class="fa-solid fa-users text-lg mb-0.5"></i> 客户
+            </button>
+            <button @click="currentTab = 'exhibition'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'exhibition' ? 'text-amber-600 font-bold' : 'text-gray-500']">
+                <i class="fa-solid fa-qrcode text-lg mb-0.5"></i> 扫码
+            </button>
+            <button @click="currentTab = 'followups'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'followups' ? 'text-blue-600 font-bold' : 'text-gray-500']">
+                <i class="fa-solid fa-comments text-lg mb-0.5"></i> 跟进
+            </button>
+            <button @click="currentTab = 'products'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'products' ? 'text-blue-600 font-bold' : 'text-gray-500']">
+                <i class="fa-solid fa-box-archive text-lg mb-0.5"></i> 鞋款
+            </button>
+        </nav>
+
+        <!-- 二维码吊牌弹窗 -->
+        <div v-if="showQRModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl max-w-sm w-full p-6 text-center space-y-4">
+                <div id="tag-printable" class="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-white">
+                    <h3 class="font-bold text-lg text-slate-800">{{ selectedQRProduct.name }}</h3>
+                    <p class="text-xs text-gray-500 font-mono">SKU: {{ selectedQRProduct.sku }}</p>
+                    <div class="my-4 flex justify-center">
+                        <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + selectedQRProduct.sku" class="w-36 h-36 border p-1 rounded">
+                    </div>
+                    <p class="text-xs text-gray-600"><strong>Upper:</strong> {{ selectedQRProduct.upper_material }}</p>
+                    <p class="text-xs text-gray-600"><strong>Outsole:</strong> {{ selectedQRProduct.sole_material }}</p>
+                    <p class="text-sm font-bold text-emerald-600 mt-2">FOB Price: ${{ selectedQRProduct.price }} / PR</p>
+                </div>
+                <div class="flex gap-2 no-print">
+                    <button @click="printTag" class="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium">打印样品吊牌</button>
+                    <button @click="showQRModal = false" class="px-4 py-2 border rounded-lg text-gray-600 text-sm">关闭</button>
+                </div>
+            </div>
+        </div>
 
         <!-- 智能匹配弹窗 -->
         <div v-if="showMatchModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -486,7 +623,7 @@
                         </div>
                     </div>
 
-                    <!-- Buyer & Terms Selection (No-print for selects) -->
+                    <!-- Buyer & Terms Selection -->
                     <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded">
                         <div>
                             <p class="font-bold text-xs uppercase text-gray-500 mb-1">BUYER (CUSTOMER):</p>
@@ -545,7 +682,7 @@
                         <div class="text-xs space-y-1 w-1/2">
                             <p class="font-bold">BANK DETAILS FOR PAYMENT:</p>
                             <p>Bank Name: HSBC Hong Kong</p>
-                            <p>Account Name: FOOWTEAR EXPORT LIMITED</p>
+                            <p>Account Name: FOOTWEAR EXPORT LIMITED</p>
                             <p>SWIFT Code: HSBCHKHHXXX</p>
                         </div>
                         <div class="text-right text-sm">
@@ -568,7 +705,7 @@
             </div>
         </div>
 
-        <!-- Modals for Customer, Followup, Quote, Product (Same as before) -->
+        <!-- Modals for Customer, Followup, Quote, Product -->
         <div v-if="showCustomerModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
                 <h3 class="text-lg font-bold text-gray-800 mb-4">新增/编辑客户档案</h3>
@@ -703,8 +840,15 @@
                     showProductModal: false,
                     showMatchModal: false,
                     showPIModal: false,
+                    showQRModal: false,
+                    selectedQRProduct: {},
                     selectedMatchCustomer: {},
                     matchedProducts: [],
+                    exhibitionTargetCustomer: '',
+                    exhibitionSelectedSKU: '',
+                    exhibitionCart: [],
+                    isCameraActive: false,
+                    html5QrCode: null,
                     piForm: {
                         piNumber: 'PI-' + Math.floor(100000 + Math.random() * 900000),
                         date: new Date().toISOString().split('T')[0],
@@ -805,7 +949,8 @@
                         { id: 1, company: 'Global Footwear Ltd', country: '美国', contact: 'John Smith', contact_info: 'john@globalfootwear.com', level: 'VIP', channel: '展会(广交会/华交会)', date: '2025-10-15', stage: '稳定复购', preferred_styles: '跑鞋', preferences: '透气飞织', target_price: '$15 - $22', target_market: 'US 7-12', moq: '3,000双/季', sales_rep: '张经理', notes: '对品质要求高' }
                     ];
                     this.products = [
-                        { id: 1, sku: 'SKU-RN901', name: '超轻飞织高弹跑步鞋', category: '跑鞋', upper_material: '透气飞织', sole_material: 'MD+橡胶', price: 16.5, moq: 1000, target_market: '北美', tags: '透气轻盈, 跑鞋', image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400' }
+                        { id: 1, sku: 'SKU-RN901', name: '超轻飞织高弹跑步鞋', category: '跑鞋', upper_material: '透气飞织', sole_material: 'MD+橡胶', price: 16.5, moq: 1000, target_market: '北美', tags: '透气轻盈, 跑鞋', image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400' },
+                        { id: 2, sku: 'SKU-CS204', name: '复古低帮帆布滑板鞋', category: '休闲鞋', upper_material: '12安高密度帆布', sole_material: '耐磨防滑橡胶底', price: 12.00, moq: 1500, target_market: '南美', tags: '经典耐看, 帆布', image_url: 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=400' }
                     ];
                     this.followups = [
                         { id: 1, company: 'Global Footwear Ltd', date: '2026-07-15', channel: 'WhatsApp', notes: '沟通2027精选款', interest: '高', next_date: '2026-08-01', action: '寄送样品', status: '进行中', sales_rep: '张经理' }
@@ -863,6 +1008,75 @@
                     if (interest === '中') return 'bg-yellow-100 text-yellow-800';
                     return 'bg-gray-100 text-gray-800';
                 },
+                showQRTag(p) {
+                    this.selectedQRProduct = p;
+                    this.showQRModal = true;
+                },
+                printTag() {
+                    window.print();
+                },
+                addSelectedProductToCart() {
+                    if (!this.exhibitionSelectedSKU) return;
+                    const p = this.products.find(x => x.sku === this.exhibitionSelectedSKU);
+                    if (p) {
+                        const existing = this.exhibitionCart.find(x => x.sku === p.sku);
+                        if (existing) {
+                            existing.qty += 1000;
+                        } else {
+                            this.exhibitionCart.push({ ...p, qty: p.moq || 1000 });
+                        }
+                    }
+                },
+                toggleCamera() {
+                    if (this.isCameraActive) {
+                        if (this.html5QrCode) {
+                            this.html5QrCode.stop().then(() => {
+                                this.isCameraActive = false;
+                            });
+                        }
+                    } else {
+                        this.isCameraActive = true;
+                        this.$nextTick(() => {
+                            this.html5QrCode = new Html5Qrcode("reader");
+                            this.html5QrCode.start(
+                                { facingMode: "environment" },
+                                { fps: 10, qrbox: { width: 250, height: 250 } },
+                                (decodedText) => {
+                                    this.exhibitionSelectedSKU = decodedText;
+                                    this.addSelectedProductToCart();
+                                    alert('已扫描识别款号: ' + decodedText);
+                                },
+                                (errorMessage) => {}
+                            ).catch(err => {
+                                alert("打开相机失败: " + err);
+                                this.isCameraActive = false;
+                            });
+                        });
+                    }
+                },
+                batchCreateQuotes() {
+                    if (!this.exhibitionTargetCustomer) return alert('请先选择客户！');
+                    if (this.exhibitionCart.length === 0) return alert('请先添加看样鞋款！');
+                    this.exhibitionCart.forEach(item => {
+                        this.quickAddQuote(this.exhibitionTargetCustomer, item.sku, item.price, item.qty);
+                    });
+                    this.exhibitionCart = [];
+                    alert('已成功批量生成报价与看样记录！');
+                    this.currentTab = 'quotes';
+                },
+                openPIFromExhibition() {
+                    if (!this.exhibitionTargetCustomer) return alert('请先选择客户！');
+                    if (this.exhibitionCart.length === 0) return alert('请先添加看样鞋款！');
+                    this.piForm.selectedCompany = this.exhibitionTargetCustomer;
+                    this.onPICompanyChange();
+                    this.piForm.items = this.exhibitionCart.map(item => ({
+                        sku: item.sku,
+                        desc: item.name + ' (' + item.upper_material + '/' + item.sole_material + ')',
+                        qty: item.qty,
+                        price: item.price
+                    }));
+                    this.showPIModal = true;
+                },
                 showSmartMatch(customer) {
                     this.selectedMatchCustomer = customer;
                     const pref = (customer.preferred_styles + ' ' + customer.preferences + ' ' + customer.target_market).toLowerCase();
@@ -890,21 +1104,19 @@
                 printPI() {
                     window.print();
                 },
-                quickAddQuote(company, sku, price) {
+                quickAddQuote(company, sku, price, qty = 1000) {
                     this.newQuote = {
                         company: company,
                         date: new Date().toISOString().split('T')[0],
                         sku: sku,
                         price: price,
-                        qty: 1000,
+                        qty: qty,
                         express_no: '',
                         status: '已发送报价',
-                        feedback: '智能推荐匹配',
+                        feedback: '展会/推荐加购',
                         sales_rep: this.currentUser.name
                     };
                     this.saveQuote();
-                    this.showMatchModal = false;
-                    alert('已自动创建报价记录！');
                 },
                 openCustomerModal() {
                     this.editingCustomer = {
