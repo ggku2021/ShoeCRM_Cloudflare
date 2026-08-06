@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鞋业外贸 CRM 系统 v3.0 - 展会扫码与速记版</title>
+    <title>鞋业外贸 CRM 系统 v4.0 - 旗舰版</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -35,8 +35,8 @@
                     <div class="inline-flex p-3 bg-blue-100 text-blue-600 rounded-full mb-2">
                         <i class="fa-solid fa-shoe-prints text-3xl"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-800">鞋业外贸 CRM v3.0</h2>
-                    <p class="text-sm text-gray-500 mt-1">多账号协同 · 展会扫码 · 电子PI生成</p>
+                    <h2 class="text-2xl font-bold text-gray-800">鞋业外贸 CRM v4.0</h2>
+                    <p class="text-sm text-gray-500 mt-1">多账号协同 · 展会扫码 · 智能计算与模板</p>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -64,7 +64,7 @@
                 <i class="fa-solid fa-shoe-prints text-2xl text-blue-400"></i>
                 <div>
                     <h1 class="font-bold text-lg leading-none">ShoeCRM Pro</h1>
-                    <span class="text-xs text-slate-400">外贸鞋业管理 v3.0</span>
+                    <span class="text-xs text-slate-400">外贸鞋业管理 v4.0</span>
                 </div>
             </div>
 
@@ -89,6 +89,9 @@
                 <button @click="currentTab = 'products'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'products' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
                     <i class="fa-solid fa-box-archive w-5"></i><span>鞋款库</span>
                 </button>
+                <button @click="currentTab = 'tools'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'tools' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
+                    <i class="fa-solid fa-calculator w-5"></i><span>外贸工具与模板</span>
+                </button>
                 <button @click="openPIModal()" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-emerald-400 hover:bg-slate-800']">
                     <i class="fa-solid fa-file-pdf w-5"></i><span>生成外贸PI/报价单</span>
                 </button>
@@ -110,7 +113,7 @@
             </div>
             <div class="flex items-center gap-2">
                 <button @click="currentTab = 'exhibition'" class="text-xs bg-amber-600 text-white px-2 py-1 rounded flex items-center gap-1">
-                    <i class="fa-solid fa-qrcode"></i> 扫码选样
+                    <i class="fa-solid fa-qrcode"></i> 扫码
                 </button>
                 <button @click="logout" class="text-xs text-red-400 underline">退出</button>
             </div>
@@ -216,7 +219,7 @@
                 </div>
             </div>
 
-            <!-- EXHIBITION / SCANNER MODULE -->
+            <!-- 2. EXHIBITION / SCANNER MODULE -->
             <div v-if="currentTab === 'exhibition'" class="space-y-6">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">展会 / 展厅现场速记与扫码选样</h2>
@@ -230,28 +233,25 @@
                             <i class="fa-solid fa-qrcode text-amber-500"></i> 扫码/选择鞋款
                         </h3>
                         
-                        <!-- Select Target Customer -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">选择当前意向客户 *</label>
                             <select v-model="exhibitionTargetCustomer" class="w-full border p-2 rounded bg-white text-sm">
-                                <option value="">-- 请选择现有客户或新建 --</option>
+                                <option value="">-- 请选择现有客户 --</option>
                                 <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }} ({{ c.country }})</option>
                             </select>
                         </div>
 
-                        <!-- Manual SKU Search / Selector -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">选择/手动输入样品款号 (SKU)</label>
                             <div class="flex gap-2">
                                 <select v-model="exhibitionSelectedSKU" class="w-full border p-2 rounded bg-white text-sm">
-                                    <option value="">-- 拖动选择鞋款 --</option>
+                                    <option value="">-- 选择鞋款 --</option>
                                     <option v-for="p in products" :key="p.id" :value="p.sku">{{ p.sku }} - {{ p.name }} (${{ p.price }})</option>
                                 </select>
                                 <button @click="addSelectedProductToCart" class="bg-blue-600 text-white px-4 py-2 rounded text-sm whitespace-nowrap">添加</button>
                             </div>
                         </div>
 
-                        <!-- Scanner Trigger -->
                         <div class="pt-2 border-t">
                             <button @click="toggleCamera" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-camera"></i> {{ isCameraActive ? '关闭摄像头' : '打开手机摄像头扫码' }}
@@ -286,7 +286,7 @@
                                     </div>
                                     <div class="flex items-center gap-3">
                                         <div class="flex items-center gap-1">
-                                            <span class="text-xs text-gray-500">数盘(双):</span>
+                                            <span class="text-xs text-gray-500">数量(双):</span>
                                             <input type="number" v-model.number="item.qty" class="w-16 border p-1 text-center rounded text-xs">
                                         </div>
                                         <button @click="exhibitionCart.splice(idx, 1)" class="text-red-500 text-sm hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
@@ -307,7 +307,7 @@
                 </div>
             </div>
 
-            <!-- 2. 客户管理 -->
+            <!-- 3. 客户管理 -->
             <div v-if="currentTab === 'customers'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -382,7 +382,7 @@
                 </div>
             </div>
 
-            <!-- 3. 跟进记录 -->
+            <!-- 4. 跟进记录 -->
             <div v-if="currentTab === 'followups'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -438,7 +438,7 @@
                 </div>
             </div>
 
-            <!-- 4. 报价与样品 -->
+            <!-- 5. 报价与样品 -->
             <div v-if="currentTab === 'quotes'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -486,7 +486,7 @@
                 </div>
             </div>
 
-            <!-- 5. 鞋款库 -->
+            <!-- 6. 鞋款库 -->
             <div v-if="currentTab === 'products'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -525,6 +525,159 @@
                 </div>
             </div>
 
+            <!-- 7. 外贸工具与沟通模板 MODULE -->
+            <div v-if="currentTab === 'tools'" class="space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">外贸实用工具箱 & 沟通模板</h2>
+                    <p class="text-sm text-gray-500">鞋类外贸计算器、国际鞋码转换与多场景英文开发信生成</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- CBM & Container Calculator -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
+                        <h3 class="font-bold text-gray-800 text-base border-b pb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-boxes-packing text-blue-600"></i> 集装箱装箱量（CBM）计算器
+                        </h3>
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div>
+                                <label class="block font-medium mb-1">单箱长 (cm)</label>
+                                <input type="number" v-model.number="calcBox.length" class="w-full border p-2 rounded">
+                            </div>
+                            <div>
+                                <label class="block font-medium mb-1">单箱宽 (cm)</label>
+                                <input type="number" v-model.number="calcBox.width" class="w-full border p-2 rounded">
+                            </div>
+                            <div>
+                                <label class="block font-medium mb-1">单箱高 (cm)</label>
+                                <input type="number" v-model.number="calcBox.height" class="w-full border p-2 rounded">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <label class="block font-medium mb-1">每箱双数 (prs/ctn)</label>
+                                <input type="number" v-model.number="calcBox.pairsPerCarton" class="w-full border p-2 rounded">
+                            </div>
+                            <div>
+                                <label class="block font-medium mb-1">计划总件数/箱数</label>
+                                <input type="number" v-model.number="calcBox.totalCartons" class="w-full border p-2 rounded">
+                            </div>
+                        </div>
+
+                        <!-- Calc Results -->
+                        <div class="bg-blue-50 p-4 rounded-lg space-y-2 text-xs text-slate-700">
+                            <div class="flex justify-between">
+                                <span>单箱体积 (Single CBM):</span>
+                                <span class="font-mono font-bold">{{ singleCBM.toFixed(4) }} m³</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>总体积 (Total CBM):</span>
+                                <span class="font-mono font-bold text-blue-700">{{ totalCBM.toFixed(2) }} m³</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>总鞋双数 (Total Pairs):</span>
+                                <span class="font-mono font-bold text-blue-700">{{ totalPairs }} 双</span>
+                            </div>
+                            <hr class="border-blue-200">
+                            <p class="font-bold text-gray-800">货柜推荐测算：</p>
+                            <div class="grid grid-cols-3 gap-2 text-center pt-1">
+                                <div class="bg-white p-2 rounded border">
+                                    <p class="text-gray-500">20尺小柜 (28m³)</p>
+                                    <p class="font-bold text-slate-800 mt-1">约 {{ Math.floor(28 / (singleCBM || 1)) }} 箱</p>
+                                    <p class="text-xs text-gray-400">({{ Math.floor(28 / (singleCBM || 1)) * calcBox.pairsPerCarton }} 双)</p>
+                                </div>
+                                <div class="bg-white p-2 rounded border">
+                                    <p class="text-gray-500">40尺平柜 (58m³)</p>
+                                    <p class="font-bold text-slate-800 mt-1">约 {{ Math.floor(58 / (singleCBM || 1)) }} 箱</p>
+                                    <p class="text-xs text-gray-400">({{ Math.floor(58 / (singleCBM || 1)) * calcBox.pairsPerCarton }} 双)</p>
+                                </div>
+                                <div class="bg-white p-2 rounded border">
+                                    <p class="text-gray-500">40尺高柜 (68m³)</p>
+                                    <p class="font-bold text-slate-800 mt-1">约 {{ Math.floor(68 / (singleCBM || 1)) }} 箱</p>
+                                    <p class="text-xs text-gray-400">({{ Math.floor(68 / (singleCBM || 1)) * calcBox.pairsPerCarton }} 双)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Shoe Size Conversion -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
+                        <h3 class="font-bold text-gray-800 text-base border-b pb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-ruler-horizontal text-emerald-600"></i> 国际通用鞋码换算表
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-center text-xs border border-gray-200">
+                                <thead class="bg-gray-50 font-bold">
+                                    <tr>
+                                        <th class="p-2 border">内长 (cm)</th>
+                                        <th class="p-2 border">欧码 (EU)</th>
+                                        <th class="p-2 border">美码 (US 男)</th>
+                                        <th class="p-2 border">美码 (US 女)</th>
+                                        <th class="p-2 border">英码 (UK)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    <tr><td class="p-1.5 border">24.0</td><td class="p-1.5 border">38</td><td class="p-1.5 border">6.0</td><td class="p-1.5 border">7.0</td><td class="p-1.5 border">5.5</td></tr>
+                                    <tr><td class="p-1.5 border">24.5</td><td class="p-1.5 border">39</td><td class="p-1.5 border">6.5</td><td class="p-1.5 border">7.5</td><td class="p-1.5 border">6.0</td></tr>
+                                    <tr><td class="p-1.5 border">25.0</td><td class="p-1.5 border">40</td><td class="p-1.5 border">7.5</td><td class="p-1.5 border">8.5</td><td class="p-1.5 border">6.5</td></tr>
+                                    <tr><td class="p-1.5 border">25.5</td><td class="p-1.5 border">41</td><td class="p-1.5 border">8.0</td><td class="p-1.5 border">9.0</td><td class="p-1.5 border">7.0</td></tr>
+                                    <tr><td class="p-1.5 border">26.0</td><td class="p-1.5 border">42</td><td class="p-1.5 border">8.5</td><td class="p-1.5 border">9.5</td><td class="p-1.5 border">7.5</td></tr>
+                                    <tr><td class="p-1.5 border">26.5</td><td class="p-1.5 border">43</td><td class="p-1.5 border">9.5</td><td class="p-1.5 border">10.5</td><td class="p-1.5 border">8.5</td></tr>
+                                    <tr><td class="p-1.5 border">27.0</td><td class="p-1.5 border">44</td><td class="p-1.5 border">10.0</td><td class="p-1.5 border">11.0</td><td class="p-1.5 border">9.0</td></tr>
+                                    <tr><td class="p-1.5 border">28.0</td><td class="p-1.5 border">45</td><td class="p-1.5 border">11.0</td><td class="p-1.5 border">12.0</td><td class="p-1.5 border">10.0</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email & WhatsApp Template Generator -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
+                    <h3 class="font-bold text-gray-800 text-base border-b pb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-envelope-open-text text-purple-600"></i> 外贸开发与客情跟进模板生成器
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">选择模板类型</label>
+                            <select v-model="selectedTemplateKey" class="w-full border p-2 rounded bg-white text-sm">
+                                <option value="new_season">1. 展会/季末新品推介 (New Arrival)</option>
+                                <option value="quote_followup">2. 报价后催复/跟踪 (Quote Follow-up)</option>
+                                <option value="sample_sent">3. 样品已寄出通知 (Sample Dispatch)</option>
+                                <option value="reorder">4. 老客户复购跟进 (Reorder Notice)</option>
+                            </select>
+
+                            <label class="block text-xs font-semibold text-gray-600 mt-3 mb-1">选择目标客户（填充变量）</label>
+                            <select v-model="templateCustomer" class="w-full border p-2 rounded bg-white text-sm">
+                                <option value="">-- 选择客户 --</option>
+                                <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }} ({{ c.contact }})</option>
+                            </select>
+
+                            <div class="mt-4 p-3 bg-gray-50 rounded border text-xs text-gray-500">
+                                <p class="font-bold mb-1">💡 快捷操作：</p>
+                                <p>点击“复制英文邮件”，直接粘贴到 Outlook/Gmail 或客户的 WhatsApp 对话框中发送。</p>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2 space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">邮件主题 (Subject)</label>
+                                <input type="text" :value="generatedEmailSubject" readonly class="w-full bg-gray-50 border p-2 rounded font-mono text-xs text-slate-800">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">邮件正文 (Body)</label>
+                                <textarea :value="generatedEmailBody" readonly class="w-full bg-gray-50 border p-3 rounded font-mono text-xs text-slate-800 h-48"></textarea>
+                            </div>
+                            <div class="flex justify-end gap-2">
+                                <button @click="copyTemplateText" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-xs font-medium">
+                                    <i class="fa-solid fa-copy me-1"></i> 复制邮件内容
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
         </main>
 
         <!-- 移动端底部导航栏 -->
@@ -541,8 +694,8 @@
             <button @click="currentTab = 'followups'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'followups' ? 'text-blue-600 font-bold' : 'text-gray-500']">
                 <i class="fa-solid fa-comments text-lg mb-0.5"></i> 跟进
             </button>
-            <button @click="currentTab = 'products'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'products' ? 'text-blue-600 font-bold' : 'text-gray-500']">
-                <i class="fa-solid fa-box-archive text-lg mb-0.5"></i> 鞋款
+            <button @click="currentTab = 'tools'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'tools' ? 'text-blue-600 font-bold' : 'text-gray-500']">
+                <i class="fa-solid fa-calculator text-lg mb-0.5"></i> 工具
             </button>
         </nav>
 
@@ -708,7 +861,7 @@
         <!-- Modals for Customer, Followup, Quote, Product -->
         <div v-if="showCustomerModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">新增/编辑客户档案</h3>
+                <h3 class="text-lg font-bold text-gray-800 mb-4">墙报新增/编辑客户档案</h3>
                 <div class="space-y-3 text-sm">
                     <div><label class="block text-xs font-semibold text-gray-600 mb-1">公司名称 *</label><input type="text" v-model="editingCustomer.company" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500"></div>
                     <div class="grid grid-cols-2 gap-2">
@@ -849,6 +1002,15 @@
                     exhibitionCart: [],
                     isCameraActive: false,
                     html5QrCode: null,
+                    calcBox: {
+                        length: 60,
+                        width: 40,
+                        height: 35,
+                        pairsPerCarton: 12,
+                        totalCartons: 100
+                    },
+                    selectedTemplateKey: 'new_season',
+                    templateCustomer: '',
                     piForm: {
                         piNumber: 'PI-' + Math.floor(100000 + Math.random() * 900000),
                         date: new Date().toISOString().split('T')[0],
@@ -909,6 +1071,85 @@
                 },
                 calculatePITotalAmount() {
                     return this.piForm.items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.price) || 0), 0);
+                },
+                singleCBM() {
+                    return (this.calcBox.length * this.calcBox.width * this.calcBox.height) / 1000000;
+                },
+                totalCBM() {
+                    return this.singleCBM * (this.calcBox.totalCartons || 0);
+                },
+                totalPairs() {
+                    return (this.calcBox.pairsPerCarton || 0) * (this.calcBox.totalCartons || 0);
+                },
+                generatedEmailSubject() {
+                    const c = this.customers.find(item => item.company === this.templateCustomer);
+                    const name = c ? c.contact : 'Partner';
+                    if (this.selectedTemplateKey === 'new_season') return `Latest Footwear Collection - ${name}`;
+                    if (this.selectedTemplateKey === 'quote_followup') return `Follow-up: Quotation & Samples for ${name}`;
+                    if (this.selectedTemplateKey === 'sample_sent') return `Tracking Details for Your Footwear Samples - ${name}`;
+                    if (this.selectedTemplateKey === 'reorder') return `Spring/Summer Footwear Order Planning for ${name}`;
+                    return 'Inquiry from Footwear Manufacturer';
+                },
+                generatedEmailBody() {
+                    const c = this.customers.find(item => item.company === this.templateCustomer);
+                    const name = c ? c.contact : 'Valued Client';
+                    const company = c ? c.company : 'your company';
+                    
+                    if (this.selectedTemplateKey === 'new_season') {
+                        return `Dear ${name},
+
+Hope this email finds you well.
+
+We have recently launched our new season footwear catalog, featuring breathable flyknit running shoes and lightweight EVA slides tailored for ${c ? c.country : 'your market'}.
+
+Based on your preference for ${c ? c.preferred_styles : 'quality footwear'}, we think these new styles would be a great fit for ${company}.
+
+Would you like us to send over the digital catalog and quotation sheet?
+
+Best regards,
+${this.currentUser.name || 'Sales Manager'}
+Footwear Export Co., Ltd.`;
+                    }
+                    if (this.selectedTemplateKey === 'quote_followup') {
+                        return `Dear ${name},
+
+I am writing to follow up on the quotation and product specifications we sent over recently for ${company}.
+
+Have you had a chance to review the details? Please let us know if you need any adjustments on the target price or sample modifications.
+
+Looking forward to hearing from you soon.
+
+Best regards,
+${this.currentUser.name || 'Sales Manager'}
+Footwear Export Co., Ltd.`;
+                    }
+                    if (this.selectedTemplateKey === 'sample_sent') {
+                        return `Dear ${name},
+
+We are pleased to inform you that your requested footwear samples have been dispatched.
+
+Please find the tracking information below:
+- Express Carrier: DHL/FedEx
+- Estimated Arrival: 3-5 business days
+
+We look forward to receiving your feedback on the fit, material, and workmanship upon arrival.
+
+Best regards,
+${this.currentUser.name || 'Sales Manager'}
+Footwear Export Co., Ltd.`;
+                    }
+                    if (this.selectedTemplateKey === 'reorder') {
+                        return `Dear ${name},
+
+As we approach the upcoming peak production season, we'd like to check with ${company} regarding your inventory and reorder plans.
+
+To ensure timely delivery, we recommend locking in production slots and material lead times early. Please let us know if you need updated FCL/LCL pricing.
+
+Best regards,
+${this.currentUser.name || 'Sales Manager'}
+Footwear Export Co., Ltd.`;
+                    }
+                    return '';
                 }
             },
             mounted() {
@@ -1103,6 +1344,14 @@
                 },
                 printPI() {
                     window.print();
+                },
+                copyTemplateText() {
+                    const fullText = `Subject: ${this.generatedEmailSubject}
+
+${this.generatedEmailBody}`;
+                    navigator.clipboard.writeText(fullText).then(() => {
+                        alert('已成功复制邮件主题和正文至剪贴板！');
+                    });
                 },
                 quickAddQuote(company, sku, price, qty = 1000) {
                     this.newQuote = {
