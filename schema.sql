@@ -80,16 +80,15 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 -- Seed Initial Admin (password: admin123) and Sales (password: 123456)
--- Hash = SHA256("admin123" + "12345678901234567890123456789012")
-INSERT OR IGNORE INTO users (id, username, password_hash, salt, name, role, created_at)
-VALUES (1, 'admin', '80c3547844a4d6428c946e382d603a113ec182ce0a6fbcefe8f1d826c7104b2b', '12345678901234567890123456789012', '管理员', 'admin', '2026-08-06T00:00:00');
+INSERT OR REPLACE INTO users (id, username, password_hash, salt, name, role, created_at)
+VALUES (1, 'admin', 'd13b11fa64c639f47bd1c8d9c8dce08125ea5e2b539c2ed3e0b977825b474825', '12345678901234567890123456789012', '管理员', 'admin', '2026-08-06T00:00:00');
 
-INSERT OR IGNORE INTO users (id, username, password_hash, salt, name, role, created_at)
-VALUES (2, 'sales1', '1f50a4176fb44e59048e9a2636a0734a74950e1ef3dd6bb18da062f68903c737', '12345678901234567890123456789012', '张经理', 'sales', '2026-08-06T00:00:00');
+INSERT OR REPLACE INTO users (id, username, password_hash, salt, name, role, created_at)
+VALUES (2, 'sales1', '6f279d4544b889818fedb64d7e2309dd3c79ceeacd313ee944cc87df4e4afb19', '12345678901234567890123456789012', '张经理', 'sales', '2026-08-06T00:00:00');
 
 -- Seed Sample Data
 INSERT OR IGNORE INTO customers (id, company, country, contact, contact_info, level, channel, date, stage, preferred_styles, preferences, target_price, target_market, moq, sales_rep, notes, created_by)
-VALUES (1, 'Global Footwear Ltd', '美国', 'John Smith', 'john@globalfootwear.com', 'VIP', '展会(广交会/华交会)', '2025-10-15', '预定/复购', '网面跑鞋、喷泡鞋', '网布透气、轻量化EVA发泡大底', '$15 - $22', 'US 7-12', '3,000双/季', '张经理', '对品质要求高，需通过BSCI验厂', 2);
+VALUES (1, 'Global Footwear Ltd', '美国', 'John Smith', 'john@globalfootwear.com', 'VIP', '展会(广交会/华交会)', '2025-10-15', '预定/复购', '网面跑鞋、喷泡鞋', '网布透气、轻量化EVA发泡大底', '5 - 2', 'US 7-12', '3,000双/季', '张经理', '对品质要求高，需通过BSCI验厂', 2);
 
 INSERT OR IGNORE INTO followups (id, company, date, channel, notes, interest, next_date, action, status, sales_rep, created_by)
 VALUES (1, 'Global Footwear Ltd', '2026-07-15', 'WhatsApp', '沟通2027春夏新品开发，客户对飞织网面网球鞋表示浓厚兴趣', '高', '2026-08-10', '安排快递寄出最新飞织鞋面色卡和样品', '进行中', '张经理', 2);
