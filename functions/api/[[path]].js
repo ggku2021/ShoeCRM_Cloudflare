@@ -1,4 +1,3 @@
-
 // Cloudflare Pages Function - API Handler with D1 Database & Crypto Web API
 async function hashPassword(password, salt) {
   const encoder = new TextEncoder();
@@ -176,14 +175,27 @@ export async function onRequest(context) {
     }
     if (request.method === "POST") {
       const b = await request.json();
-      await db.prepare(`
-        INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        b.sku || "", b.name || "", b.category || "", b.upper_material || "",
-        b.sole_material || "", b.price || 0, b.moq || 1000, b.target_market || "", b.tags || ""
-      ).run();
-      return jsonResponse({ message: "鞋款已被保存" });
+      if (b.id) {
+        // Update
+        await db.prepare(`
+          UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=?, image_url=?
+          WHERE id=?
+        `).bind(
+          b.sku || "", b.name || "", b.category || "", b.upper_material || "",
+          b.sole_material || "", b.price || 0, b.moq || 1000, b.target_market || "", b.tags || "", b.image_url || "", b.id
+        ).run();
+        return jsonResponse({ message: "鞋款修改成功" });
+      } else {
+        // Insert
+        await db.prepare(`
+          INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          b.sku || "", b.name || "", b.category || "", b.upper_material || "",
+          b.sole_material || "", b.price || 0, b.moq || 1000, b.target_market || "", b.tags || "", b.image_url || ""
+        ).run();
+        return jsonResponse({ message: "鞋款保存成功" });
+      }
     }
   }
 

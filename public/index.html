@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鞋业外贸 CRM 系统 v5.0 - 旗舰版</title>
+    <title>鞋业外贸 CRM 系统 v5.1 - 旗舰版</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -35,8 +35,8 @@
                     <div class="inline-flex p-3 bg-blue-100 text-blue-600 rounded-full mb-2">
                         <i class="fa-solid fa-shoe-prints text-3xl"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v5.0</h2>
-                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 算价 · 展会 · 电子PI</p>
+                    <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v5.1</h2>
+                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 实时汇率 · 展会速记 · 电子PI</p>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -52,7 +52,7 @@
                         登录系统 / Login
                     </button>
                     <div class="text-center">
-                        <button @click="enableDemoMode" class="text-xs text-slate-500 underline">单机演示模式 (Demo Mode)</button>
+                        <button @click="enableDemoMode" class="text-xs text-slate-500 underline">单机演示模式 (不连数据库)</button>
                     </div>
                 </div>
             </div>
@@ -64,7 +64,7 @@
                 <i class="fa-solid fa-shoe-prints text-2xl text-blue-400"></i>
                 <div>
                     <h1 class="font-bold text-lg leading-none">ShoeCRM Pro</h1>
-                    <span class="text-xs text-slate-400">鞋业外贸管理 v5.0</span>
+                    <span class="text-xs text-slate-400">外贸鞋业管理 v5.1</span>
                 </div>
             </div>
 
@@ -230,7 +230,7 @@
                 </div>
             </div>
 
-            <!-- EXHIBITION MODULE -->
+            <!-- 2. EXHIBITION MODULE -->
             <div v-if="currentTab === 'exhibition'" class="space-y-6">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">展会 / 展厅现场速记与扫码选样</h2>
@@ -523,9 +523,12 @@
                         </div>
                         <div class="flex items-center justify-between pt-1">
                             <button @click="showQRTag(p)" class="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded hover:bg-amber-100 flex items-center gap-1">
-                                <i class="fa-solid fa-qrcode"></i> 样品二维码标签
+                                <i class="fa-solid fa-qrcode"></i> 二维码吊牌
                             </button>
-                            <button @click="deleteProduct(p.id)" class="text-xs text-red-600 hover:underline">删除鞋款</button>
+                            <div class="space-x-2">
+                                <button @click="openProductModal(p)" class="text-xs text-blue-600 hover:underline">编辑</button>
+                                <button @click="deleteProduct(p.id)" class="text-xs text-red-600 hover:underline">删除</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -538,11 +541,16 @@
                     <p class="text-sm text-gray-500">外贸出口报价测算、CBM集装箱配载、鞋码转换与开发信模板</p>
                 </div>
 
-                <!-- Export Price & Profit Calculator (NEW) -->
+                <!-- Export Price & Profit Calculator (NEW WITH LIVE EXCHANGE RATE) -->
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
-                    <h3 class="font-bold text-gray-800 text-base border-b pb-2 flex items-center gap-2">
-                        <i class="fa-solid fa-calculator text-emerald-600"></i> 外贸出口报价与退税测算器 (FOB Price Calculator)
-                    </h3>
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <h3 class="font-bold text-gray-800 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-calculator text-emerald-600"></i> 外贸出口报价与退税测算器 (FOB Price Calculator)
+                        </h3>
+                        <button @click="fetchLiveExchangeRate" class="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded border border-blue-200 hover:bg-blue-100 flex items-center gap-1">
+                            <i class="fa-solid fa-arrows-rotate" :class="{'fa-spin': isFetchingRate}"></i> 刷新实时美元汇率
+                        </button>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
                         <div>
                             <label class="block font-medium mb-1">工厂含税出厂价 (RMB/双)</label>
@@ -557,8 +565,8 @@
                             <input type="number" v-model.number="calcPricing.vatRate" class="w-full border p-2 rounded">
                         </div>
                         <div>
-                            <label class="block font-medium mb-1">美金汇率 (USD/RMB)</label>
-                            <input type="number" step="0.01" v-model.number="calcPricing.exchangeRate" class="w-full border p-2 rounded">
+                            <label class="block font-medium mb-1">美金汇率 (USD/CNY)</label>
+                            <input type="number" step="0.0001" v-model.number="calcPricing.exchangeRate" class="w-full border p-2 rounded">
                         </div>
                     </div>
 
@@ -999,7 +1007,7 @@
 
         <div v-if="showProductModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">添加新鞋款</h3>
+                <h3 class="text-lg font-bold text-gray-800 mb-4">{{ newProduct.id ? '编辑鞋款信息' : '添加新鞋款' }}</h3>
                 <div class="space-y-3 text-sm">
                     <div class="grid grid-cols-2 gap-2">
                         <div><label class="block text-xs font-semibold text-gray-600 mb-1">款号 (SKU) *</label><input type="text" v-model="newProduct.sku" placeholder="SKU-XXXX" class="w-full border p-2 rounded"></div>
@@ -1038,6 +1046,7 @@
                     lang: 'zh',
                     isLoggedIn: false,
                     isDemoMode: false,
+                    isFetchingRate: false,
                     token: localStorage.getItem('shoecrm_token') || '',
                     currentUser: JSON.parse(localStorage.getItem('shoecrm_user') || '{}'),
                     loginForm: { username: '', password: '' },
@@ -1140,10 +1149,11 @@
                     return this.piForm.items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.price) || 0), 0);
                 },
                 calcNetCost() {
-                    const cost = this.calcPricing.factoryCost;
-                    const vat = this.calcPricing.vatRate / 100;
-                    const rebate = this.calcPricing.rebateRate / 100;
-                    return (cost / (1 + vat)) * (1 + vat - rebate) + this.calcPricing.portFee;
+                    const cost = this.calcPricing.factoryCost || 0;
+                    const vat = (this.calcPricing.vatRate || 0) / 100;
+                    const rebate = (this.calcPricing.rebateRate || 0) / 100;
+                    const port = this.calcPricing.portFee || 0;
+                    return (cost / (1 + vat)) * (1 + vat - rebate) + port;
                 },
                 calcBreakEvenFOB() {
                     if (!this.calcPricing.exchangeRate) return 0;
@@ -1151,7 +1161,7 @@
                 },
                 calcRecommendedFOB() {
                     const breakEven = this.calcBreakEvenFOB;
-                    const margin = this.calcPricing.margin / 100;
+                    const margin = (this.calcPricing.margin || 0) / 100;
                     return breakEven / (1 - margin);
                 },
                 singleCBM() {
@@ -1239,8 +1249,23 @@ Footwear Export Co., Ltd.`;
                     this.isLoggedIn = true;
                     this.fetchAllData();
                 }
+                this.fetchLiveExchangeRate();
             },
             methods: {
+                async fetchLiveExchangeRate() {
+                    this.isFetchingRate = true;
+                    try {
+                        const res = await fetch('https://open.er-api.com/v6/latest/USD');
+                        const data = await res.json();
+                        if (data && data.rates && data.rates.CNY) {
+                            this.calcPricing.exchangeRate = parseFloat(data.rates.CNY.toFixed(4));
+                        }
+                    } catch (e) {
+                        console.log('Failed to fetch live exchange rate, using default.');
+                    } finally {
+                        this.isFetchingRate = false;
+                    }
+                },
                 toggleLang() {
                     this.lang = this.lang === 'zh' ? 'en' : 'zh';
                 },
@@ -1468,7 +1493,7 @@ ${this.generatedEmailBody}`;
                     this.editingCustomer = {
                         company: '', country: '', contact: '', contact_info: '',
                         level: 'VIP', channel: '展会(广交会/华交会)', date: new Date().toISOString().split('T')[0],
-                        stage: '初初接触', preferred_styles: '', preferences: '', target_price: '',
+                        stage: '初次接触', preferred_styles: '', preferences: '', target_price: '',
                         target_market: '', moq: '', sales_rep: this.currentUser.name, notes: ''
                     };
                     this.showCustomerModal = true;
@@ -1547,17 +1572,27 @@ ${this.generatedEmailBody}`;
                         }
                     }
                 },
-                openProductModal() {
-                    this.newProduct = {
-                        sku: 'SKU-', name: '', category: '跑鞋', upper_material: '',
-                        sole_material: '', price: 0, moq: 1000, target_market: '', tags: '',
-                        image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400'
-                    };
+                openProductModal(p = null) {
+                    if (p) {
+                        this.newProduct = { ...p };
+                    } else {
+                        this.newProduct = {
+                            id: null,
+                            sku: 'SKU-', name: '', category: '跑鞋', upper_material: '',
+                            sole_material: '', price: 0, moq: 1000, target_market: '', tags: '',
+                            image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400'
+                        };
+                    }
                     this.showProductModal = true;
                 },
                 async saveProduct() {
                     if (this.isDemoMode) {
-                        this.products.unshift({ id: Date.now(), ...this.newProduct });
+                        if (this.newProduct.id) {
+                            const idx = this.products.findIndex(x => x.id === this.newProduct.id);
+                            if (idx !== -1) this.products[idx] = { ...this.newProduct };
+                        } else {
+                            this.products.unshift({ id: Date.now(), ...this.newProduct });
+                        }
                     } else {
                         await this.apiFetch('/api/products', { method: 'POST', body: this.newProduct });
                         this.fetchAllData();
