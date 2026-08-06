@@ -75,7 +75,7 @@ export async function onRequest(context) {
 
   // Require Auth for subsequent endpoints
   if (!currentUser && path.startsWith("/api/")) {
-    return jsonResponse({ detail: "未登录或登录过": "Unauthorized" }, 401);
+    return jsonResponse({ detail: "未登录或登录超时" }, 401);
   }
 
   // Route: /api/auth/me
