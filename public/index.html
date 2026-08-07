@@ -3,19 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Footwear Export Catalog & ShoeCRM Pro v7.2</title>
-    <!-- 国内高可用 CDN (BootCDN / Staticfile) -->
-    <script src="https://cdn.bootcdn.net/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.bootcdn.net/ajax/libs/vue/3.3.4/vue.global.prod.js"></script>
-    <script src="https://cdn.bootcdn.net/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-    
-    <!-- 备用 CDN 回退加载，防止个别网络打不开 -->
+    <title>Footwear Export Catalog & ShoeCRM Pro v8.0</title>
+
+    <!-- Tailwind CSS (Official Play CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome 6 Icons (jsDelivr CDN) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+
+    <!-- Vue 3 (jsDelivr CDN with unpkg Fallback) -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
     <script>
         if (typeof Vue === 'undefined') {
-            document.write('<script src="https://lib.baomitu.com/vue/3.3.4/vue.global.prod.js"><\/script>');
+            document.write('<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"><\/script>');
         }
     </script>
+
+    <!-- Html5Qrcode Scanner (jsDelivr CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
     <style>
         [v-cloak] { display: none !important; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -31,23 +37,6 @@
 </head>
 <body class="bg-gray-100 text-slate-800 font-sans antialiased">
 
-    <!-- 防白屏回退脚手架 (如果Vue因意外未加载完成，3秒后自动显示提示) -->
-    <div id="fallback-error" class="hidden fixed inset-0 bg-white flex flex-col items-center justify-center p-6 text-center z-50">
-        <div class="p-4 bg-red-100 text-red-600 rounded-full mb-3"><i class="fa-solid fa-triangle-exclamation text-3xl"></i></div>
-        <h3 class="text-xl font-bold text-gray-800">页面加载异常或网络被阻断</h3>
-        <p class="text-sm text-gray-500 mt-2 max-w-md">如果页面长时间无响应，请尝试清除浏览器缓存，或检查静态资源网络连接。</p>
-        <button onclick="location.reload()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">刷新页面</button>
-    </div>
-
-    <script>
-        setTimeout(function() {
-            if (typeof Vue === 'undefined' || !document.getElementById('app').__vue_app__) {
-                const el = document.getElementById('fallback-error');
-                if (el) el.classList.remove('hidden');
-            }
-        }, 3500);
-    </script>
-
     <div id="app" v-cloak class="min-h-screen flex flex-col md:flex-row">
 
         <!-- 登录弹窗 (仅在管理员/业务员非公开分享模式时显示) -->
@@ -57,8 +46,8 @@
                     <div class="inline-flex p-3 bg-blue-100 text-blue-600 rounded-full mb-2">
                         <i class="fa-solid fa-shoe-prints text-3xl"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v7.2</h2>
-                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 防白屏· 可分享画册 · 自助选款PI</p>
+                    <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v8.0</h2>
+                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 可分享画册 · 自助选款PI</p>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -87,7 +76,7 @@
                 <i class="fa-solid fa-shoe-prints text-2xl text-blue-400"></i>
                 <div>
                     <h1 class="font-bold text-lg leading-none">ShoeCRM Pro</h1>
-                    <span class="text-xs text-slate-400">外贸鞋业管理 v7.2</span>
+                    <span class="text-xs text-slate-400">外贸鞋业管理 v8.0</span>
                 </div>
             </div>
 
@@ -770,6 +759,53 @@
             </div>
         </div>
 
+        <!-- 二维码吊牌弹窗 -->
+        <div v-if="showQRModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl max-w-sm w-full p-6 text-center space-y-4">
+                <div id="tag-printable" class="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-white">
+                    <h3 class="font-bold text-lg text-slate-800">{{ selectedQRProduct.name }}</h3>
+                    <p class="text-xs text-gray-500 font-mono">SKU: {{ selectedQRProduct.sku }}</p>
+                    <div class="my-4 flex justify-center">
+                        <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + selectedQRProduct.sku" class="w-36 h-36 border p-1 rounded">
+                    </div>
+                    <p class="text-xs text-gray-600"><strong>Upper:</strong> {{ selectedQRProduct.upper_material }}</p>
+                    <p class="text-xs text-gray-600"><strong>Outsole:</strong> {{ selectedQRProduct.sole_material }}</p>
+                    <p class="text-sm font-bold text-emerald-600 mt-2">FOB Price: ${{ selectedQRProduct.price }} / PR</p>
+                </div>
+                <div class="flex gap-2 no-print">
+                    <button @click="printTag" class="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium">打印样品吊牌</button>
+                    <button @click="showQRModal = false" class="px-4 py-2 border rounded-lg text-gray-600 text-sm">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 智能匹配弹窗 -->
+        <div v-if="showMatchModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">为 <span class="text-blue-600">{{ selectedMatchCustomer.company }}</span> 智能推荐鞋款</h3>
+                    <button @click="showMatchModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div class="bg-blue-50 p-3 rounded-lg text-xs text-blue-800 mb-4">
+                    <p><strong>客户喜好偏好：</strong>{{ selectedMatchCustomer.preferred_styles }} / {{ selectedMatchCustomer.preferences }}</p>
+                    <p><strong>目标价位：</strong>{{ selectedMatchCustomer.target_price }} | <strong>目标市场：</strong>{{ selectedMatchCustomer.target_market }}</p>
+                </div>
+                <div class="space-y-3">
+                    <h4 class="font-bold text-sm text-gray-700">匹配到的鞋款：</h4>
+                    <div v-for="p in matchedProducts" :key="p.id" class="flex items-center gap-4 p-3 border rounded-lg bg-gray-50">
+                        <img :src="p.image_url" class="w-16 h-16 object-cover rounded">
+                        <div class="flex-1 text-xs">
+                            <p class="font-bold text-sm text-gray-800">{{ p.name }} ({{ p.sku }})</p>
+                            <p class="text-gray-500">材质：{{ p.upper_material }} | 价格：${{ p.price }} | MOQ: {{ p.moq }}双</p>
+                            <p class="text-blue-600 mt-1">卖点：{{ p.tags }}</p>
+                        </div>
+                        <button @click="quickAddQuote(selectedMatchCustomer.company, p.sku, p.price)" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs">生成报价记录</button>
+                    </div>
+                    <div v-if="matchedProducts.length === 0" class="text-center py-6 text-gray-400">暂无高度匹配的鞋款，请在鞋款库中添加更多产品。</div>
+                </div>
+            </div>
+        </div>
+
         <!-- 客户自助选款 PI 弹窗 -->
         <div v-if="showClientCartPIModal" class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
@@ -1115,7 +1151,7 @@
     </div>
 
     <script>
-        // 辅助防御安全解析 helper (防止 localStorage 'undefined' 崩溃)
+        // 安全读取 LocalStorage，彻底防御 JSON.parse 异常导致的白屏
         function getSafeUser() {
             try {
                 const u = localStorage.getItem('shoecrm_user');
@@ -1141,49 +1177,27 @@
                     loginForm: { username: '', password: '' },
                     loginError: '',
                     currentTab: 'lookbook',
-                    searchQuery: '',
-                    filterLevel: '',
-                    filterStage: '',
-                    showCustomerModal: false,
-                    showFollowupModal: false,
-                    showQuoteModal: false,
-                    showProductModal: false,
-                    showMatchModal: false,
-                    showPIModal: false,
-                    showQRModal: false,
-                    previewProductModal: false,
-                    previewProductData: {},
+                    searchQuery: '', filterLevel: '', filterStage: '',
+                    showCustomerModal: false, showFollowupModal: false, showQuoteModal: false,
+                    showProductModal: false, showMatchModal: false, showPIModal: false,
+                    showQRModal: false, previewProductModal: false, previewProductData: {},
                     showClientCartPIModal: false,
                     clientCart: [],
                     clientPIForm: {
                         piNumber: 'PI-' + Math.floor(100000 + Math.random() * 900000),
-                        company: '',
-                        contact: ''
+                        company: '', contact: ''
                     },
-                    lookbookSelectedSKUs: [],
-                    lookbookHidePrice: false,
-                    lookbookSearch: '',
-                    lookbookCategory: '',
-                    selectedQRProduct: {},
-                    selectedMatchCustomer: {},
-                    matchedProducts: [],
-                    exhibitionTargetCustomer: '',
-                    exhibitionSelectedSKU: '',
-                    exhibitionCart: [],
-                    isCameraActive: false,
-                    html5QrCode: null,
-                    selectedProductToAdd: null,
+                    lookbookSelectedSKUs: [], lookbookHidePrice: false, lookbookSearch: '', lookbookCategory: '',
+                    selectedQRProduct: {}, selectedMatchCustomer: {}, matchedProducts: [],
+                    exhibitionTargetCustomer: '', exhibitionSelectedSKU: '', exhibitionCart: [],
+                    isCameraActive: false, html5QrCode: null, selectedProductToAdd: null,
                     calcPricing: { factoryCost: 80, rebateRate: 13, vatRate: 13, exchangeRate: 7.20, portFee: 2.5, margin: 15 },
                     calcBox: { length: 60, width: 40, height: 35, pairsPerCarton: 12, totalCartons: 100 },
-                    selectedTemplateKey: 'new_season',
-                    templateCustomer: '',
+                    selectedTemplateKey: 'new_season', templateCustomer: '',
                     piForm: {
                         piNumber: 'PI-' + Math.floor(100000 + Math.random() * 900000),
                         date: new Date().toISOString().split('T')[0],
-                        selectedCompany: '',
-                        contactInfo: '',
-                        showImages: true,
-                        items: []
+                        selectedCompany: '', contactInfo: '', showImages: true, items: []
                     },
                     editingCustomer: {}, newFollowup: {}, newQuote: {}, newProduct: {},
                     customers: [], followups: [], quotes: [], products: []
@@ -1218,12 +1232,8 @@
                         return matchesSearch && matchesCat;
                     });
                 },
-                calculateClientPITotalQty() {
-                    return this.clientCart.reduce((acc, item) => acc + (Number(item.qty) || 0), 0);
-                },
-                calculateClientPITotalAmount() {
-                    return this.clientCart.reduce((acc, item) => acc + (Number(item.qty) * Number(item.price) || 0), 0);
-                },
+                calculateClientPITotalQty() { return this.clientCart.reduce((acc, item) => acc + (Number(item.qty) || 0), 0); },
+                calculateClientPITotalAmount() { return this.clientCart.reduce((acc, item) => acc + (Number(item.qty) * Number(item.price) || 0), 0); },
                 dealCustomersCount() { return this.customers.filter(c => c.stage === '试单成交' || c.stage === '稳定复购').length; },
                 pendingFollowupsCount() { return this.followups.filter(f => f.status !== '已完成').length; },
                 overdueCount() {
