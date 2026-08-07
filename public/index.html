@@ -746,14 +746,31 @@
                     if (!this.scrapedProduct.name || !this.scrapedProduct.sku) return alert('请检查抓取商品信息！');
                     try {
                         const savedItem = { id: Date.now(), ...this.scrapedProduct };
-                        // 立刻推入本地响应式数组，确保前端界面第一时间渲染出新抓取的商品
-                        this.products.unshift(savedItem);
+                        
+                        // 1. 本地双重持久化：立即插入内存并写入 localStorage
+                        const existingIdx = this.products.findIndex(p => p.sku === savedItem.sku);
+                        if (existingIdx > -1) {
+                            this.products[existingIdx] = savedItem;
+                        } else {
+                            this.products.unshift(savedItem);
+                        }
+                        localStorage.setItem('shoecrm_local_products', JSON.stringify(this.products));
 
+                        // 2. 后端 Cloudflare D1 数据库写入
                         if (!this.isDemoMode) {
-                            const res = await this.apiFetch('/api/products', { method: 'POST', body: this.scrapedProduct });
-                            if (res && res.id) savedItem.id = res.id;
+                            try {
+                                const res = await this.apiFetch('/api/products', { method: 'POST', body: this.scrapedProduct });
+                                if (res && res.error) {
+                                    alert('提示: 本地已成功保存，但数据库写入异常: ' + res.error);
+                                } else if (res && res.id) {
+                                    savedItem.id = res.id;
+                                }
+                            } catch (postErr) {
+                                console.warn('D1 Write Warning:', postErr);
+                            }
                             await this.fetchAllData();
                         }
+
                         this.showScraperModal = false;
                         alert('成功导入保存商品 [' + this.scrapedProduct.sku + '] 至系统鞋款库！');
                     } catch (e) {
@@ -876,10 +893,34 @@
                 async fetchAllData() {
                     if (this.isDemoMode) return;
                     try {
-                        this.customers = await this.apiFetch('/api/customers');
-                        this.followups = await this.apiFetch('/api/followups');
-                        this.quotes = await this.apiFetch('/api/quotes');
-                        this.products = await this.apiFetch('/api/products');
+                        this.customers = await this.apiFetch('/api/customers') || [];
+                        this.followups = await this.apiFetch('/api/followups') || [];
+                        this.quotes = await this.apiFetch('/api/quotes') || [];
+                        
+                        const remoteProducts = await this.apiFetch('/api/products');
+                        // 从 localStorage 读取本地缓存的抓取商品
+                        const storedLocal = JSON.parse(localStorage.getItem('shoecrm_local_products') || '[]');
+                        
+                        let combined = [];
+                        if (Array.isArray(remoteProducts) && remoteProducts.length > 0) {
+                            const remoteSkus = new Set(remoteProducts.map(p => p.sku));
+                            const localSaved = storedLocal.filter(p => !remoteSkus.has(p.sku));
+                            const currentUnsaved = this.products.filter(p => !remoteSkus.has(p.sku));
+                            
+                            combined = [...currentUnsaved, ...localSaved, ...remoteProducts];
+                        } else {
+                            combined = this.products.length > 0 ? this.products : storedLocal;
+                        }
+
+                        // 去重
+                        const seen = new Set();
+                        this.products = combined.filter(p => {
+                            if (!p.sku || seen.has(p.sku)) return false;
+                            seen.add(p.sku);
+                            return true;
+                        });
+
+                        localStorage.setItem('shoecrm_local_products', JSON.stringify(this.products));
                     } catch (e) {
                         console.error('Data loading error', e);
                     }

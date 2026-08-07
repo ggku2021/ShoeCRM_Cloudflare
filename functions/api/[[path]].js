@@ -17,6 +17,37 @@ export async function onRequest(context) {
     }
 
     try {
+        // Diagnostic Debug Endpoint to check D1 Database connection & table status
+        if (path === '/api/debug/db') {
+            if (!env.DB) {
+                return new Response(JSON.stringify({
+                    status: 'error',
+                    message: 'Cloudflare Pages 未绑定 D1 数据库 (env.DB 为 undefined)。请在 Cloudflare Pages 后台 Settings -> Functions -> D1 database bindings 绑定变量名为 DB 的数据库。'
+                }), { status: 500, headers });
+            }
+
+            try {
+                // Check products table count
+                const countRes = await env.DB.prepare('SELECT count(*) as total FROM products').first();
+                const tableInfo = await env.DB.prepare('PRAGMA table_info(products)').all();
+                const sampleProducts = await env.DB.prepare('SELECT * FROM products ORDER BY id DESC LIMIT 5').all();
+
+                return new Response(JSON.stringify({
+                    status: 'ok',
+                    message: 'D1 数据库绑定正常！',
+                    total_products: countRes ? countRes.total : 0,
+                    columns: tableInfo ? tableInfo.results : [],
+                    latest_products: sampleProducts ? sampleProducts.results : []
+                }), { headers });
+            } catch (dbErr) {
+                return new Response(JSON.stringify({
+                    status: 'db_error',
+                    message: 'D1 数据库查询失败: ' + dbErr.message,
+                    sql_fix: '请在 Cloudflare D1 控制台运行: CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, sku TEXT, name TEXT, category TEXT, upper_material TEXT, sole_material TEXT, price REAL, moq INTEGER, target_market TEXT, tags TEXT, image_url TEXT);'
+                }), { status: 500, headers });
+            }
+        }
+
         // 0. 1688 / 搜鞋网 (sooxie.com) 商品一键抓取接口
         if (path === '/api/scrape-product') {
             let targetUrl = '';
@@ -52,7 +83,7 @@ export async function onRequest(context) {
                     const match = targetUrl.match(/offer\/(\d+)\.html/);
                     sku = match ? '1688-' + match[1] : '1688-' + Math.floor(100000 + Math.random() * 900000);
                 } else if (targetUrl.includes('sooxie.com')) {
-                    const match = targetUrl.match(/(\d+)\.html/) || targetUrl.match(/id=(\d+)/);
+                    const match = targetUrl.match(/(\d+)\.html/) || targetUrl.match(/id=(\d+)/) || targetUrl.match(/detail\/(\d+)/);
                     sku = match ? 'SOOXIE-' + match[1] : 'SOOXIE-' + Math.floor(100000 + Math.random() * 900000);
                 } else {
                     sku = 'SKU-' + Math.floor(100000 + Math.random() * 900000);
@@ -66,7 +97,7 @@ export async function onRequest(context) {
 
                 // Extract Image
                 const imgMatch = html.match(/meta property="og:image" content="(.*?)"/i) || 
-                                 html.match(/<img[^>]+src="(https?:\/\/[^"]+(?:cbu01\.alicdn\.com|sooxie|img)[^"]+\.(?:jpg|png|webp))"/i) ||
+                                 html.match(/<img[^>]+src="(https?:\/\/[^"]+(?:cbu01\.alicdn\.com|sooxie|xiecdn|img)[^"]+\.(?:jpg|png|webp))"/i) ||
                                  html.match(/(https?:\/\/[^"]+\.(?:jpg|png|webp))/i);
                 if (imgMatch) {
                     image_url = imgMatch[1];
@@ -107,16 +138,23 @@ export async function onRequest(context) {
 
         // 1. 公开选款商品接口 (免 Auth Token)
         if (path === '/api/public/products' && method === 'GET') {
+            if (!env.DB) {
+                return new Response(JSON.stringify([]), { headers });
+            }
             try {
                 const { results } = await env.DB.prepare(
                     'SELECT id, sku, name, category, price, image_url, upper_material, sole_material, moq, target_market, tags FROM products ORDER BY id DESC'
                 ).all();
                 return new Response(JSON.stringify(results || []), { headers });
             } catch (e) {
-                const { results } = await env.DB.prepare(
-                    'SELECT id, sku, name, category, price, upper_material, sole_material, moq, target_market, tags FROM products ORDER BY id DESC'
-                ).all();
-                return new Response(JSON.stringify(results || []), { headers });
+                try {
+                    const { results } = await env.DB.prepare(
+                        'SELECT id, sku, name, category, price, upper_material, sole_material, moq, target_market, tags FROM products ORDER BY id DESC'
+                    ).all();
+                    return new Response(JSON.stringify(results || []), { headers });
+                } catch(err) {
+                    return new Response(JSON.stringify([]), { headers });
+                }
             }
         }
 
@@ -137,6 +175,10 @@ export async function onRequest(context) {
         const authHeader = request.headers.get('Authorization');
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return new Response(JSON.stringify({ detail: '未提供有效的登录凭证，请先登录' }), { status: 401, headers });
+        }
+
+        if (!env.DB) {
+            return new Response(JSON.stringify({ error: '未绑定 Cloudflare D1 数据库 (env.DB)' }), { status: 500, headers });
         }
 
         // 3. Customers Endpoint
@@ -224,7 +266,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 6. Products Endpoint - Resilient to missing image_url column in D1 schema
+        // 6. Products Endpoint - Strict error reporting to verify D1 SQL writes
         if (path === '/api/products') {
             if (method === 'GET') {
                 try {
@@ -237,13 +279,12 @@ export async function onRequest(context) {
             }
             if (method === 'POST') {
                 const b = await request.json();
-                try {
-                    // Try adding image_url column automatically if it doesn't exist
-                    try {
-                        await env.DB.prepare('ALTER TABLE products ADD COLUMN image_url TEXT').run();
-                    } catch(colErr) {}
 
-                    if (b.id) {
+                // 尝试建增 image_url 列
+                try { await env.DB.prepare('ALTER TABLE products ADD COLUMN image_url TEXT').run(); } catch(colErr) {}
+
+                try {
+                    if (b.id && typeof b.id === 'number' && b.id < 10000000000) {
                         await env.DB.prepare(
                             `UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=?, image_url=? WHERE id=?`
                         ).bind(
@@ -263,20 +304,12 @@ export async function onRequest(context) {
                             Number(b.moq) || 1000, b.target_market || '', b.tags || '',
                             b.image_url || ''
                         ).run();
-                        return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
+                        const lastId = res && res.meta && res.meta.last_row_id ? res.meta.last_row_id : Date.now();
+                        return new Response(JSON.stringify({ success: true, id: lastId }), { headers });
                     }
                 } catch (d1Err) {
-                    // Fallback insert if image_url column fails
-                    if (b.id) {
-                        await env.DB.prepare(
-                            `UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=? WHERE id=?`
-                        ).bind(
-                            b.sku || '', b.name || '', b.category || '跑鞋',
-                            b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
-                            Number(b.moq) || 1000, b.target_market || '', b.tags || '', b.id
-                        ).run();
-                        return new Response(JSON.stringify({ success: true, id: b.id }), { headers });
-                    } else {
+                    // 如果含 image_url 写入报错，尝试降级不写 image_url
+                    try {
                         const res = await env.DB.prepare(
                             `INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags) 
                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -285,7 +318,9 @@ export async function onRequest(context) {
                             b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
                             Number(b.moq) || 1000, b.target_market || '', b.tags || ''
                         ).run();
-                        return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
+                        return new Response(JSON.stringify({ success: true, id: res.meta ? res.meta.last_row_id : Date.now() }), { headers });
+                    } catch (fatalErr) {
+                        return new Response(JSON.stringify({ error: '数据库写入失败: ' + fatalErr.message }), { status: 500, headers });
                     }
                 }
             }
