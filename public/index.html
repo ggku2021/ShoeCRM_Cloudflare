@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鞋业外贸 CRM 系统 v6.0 - 电子画册与公开选款版</title>
+    <title>鞋业外贸 CRM 系统 v6.0 - 电子画册与买家选款版</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -35,8 +35,8 @@
                     <i class="fa-solid fa-shoe-prints text-2xl"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg md:text-xl text-white tracking-wide">FOOTWEAR EXPORT SHOWROOM</h1>
-                    <p class="text-xs text-slate-400">买家自主选款与在线画册 · Interactive Product Catalog</p>
+                    <h1 class="font-bold text-lg md:text-xl text-white tracking-wide">FOOTWEAR SHOWROOM & LOOKBOOK</h1>
+                    <p class="text-xs text-slate-400">买家在线选款与形式发票 (PI) 自助生成页</p>
                 </div>
             </div>
             <div class="flex items-center gap-3">
@@ -59,7 +59,7 @@
                         <i class="fa-solid fa-shoe-prints text-3xl"></i>
                     </div>
                     <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v6.0</h2>
-                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 电子画册 · 自助选款 · 电子PI</p>
+                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 电子画册 · 实时汇率 · 电子PI</p>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -259,22 +259,23 @@
                 </div>
             </div>
 
-            <!-- 2. 图片展示画册 / 公开自主选款 MODULE -->
+            <!-- 2. 图片展示画册 / 买家自主选款 MODULE -->
             <div v-if="isPublicCatalogMode || currentTab === 'lookbook'" class="space-y-6">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
                             <i class="fa-solid fa-images text-teal-600"></i> 
-                            <span>{{ isPublicCatalogMode ? '挑选意向鞋款画册 (Product Showcase)' : '电子图片画册 (Product Lookbook)' }}</span>
+                            <span>{{ isPublicCatalogMode ? '买家自主选款画册 (Product Showcase)' : '电子图片画册 (Product Lookbook)' }}</span>
                         </h2>
                         <p class="text-sm text-gray-500">
-                            {{ isPublicCatalogMode ? '点击商品卡片添加至您的挑选清单，一键自动生成形式发票 (PI)' : '高清大图展示，可一键复制买家自助选款链接给客户在线挑款' }}
+                            {{ isPublicCatalogMode ? '挑选您感兴趣的鞋款并加入清单，即可一键自动生成形式发票 (PI)' : '先勾选预推鞋款，点击【生成选款链接发给客户】，客户即可打开专属选款页挑选并生成PI' }}
                         </p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
-                        <!-- 业务员专属：一键复制客户自助选款链接 -->
-                        <button v-if="!isPublicCatalogMode" @click="copyShareableCatalogLink" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
-                            <i class="fa-solid fa-share-nodes"></i> 复制客户自助选款链接
+                        <!-- 业务员专属：先选款，然后生成链接发给客户 -->
+                        <button v-if="!isPublicCatalogMode" @click="copyShareableCatalogLink" class="bg-teal-600 hover:bg-teal-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>生成选款链接发给客户 (已勾选{{ lookbookSelectedSKUs.length }}款)</span>
                         </button>
 
                         <!-- 隐价模式开关 -->
@@ -285,8 +286,8 @@
                         </label>
 
                         <!-- 生成专属画册 PDF 按钮 -->
-                        <button v-if="!isPublicCatalogMode" @click="openSelectedLookbookModal" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
-                            <i class="fa-solid fa-file-pdf"></i> 生成电子画册 PDF ({{ lookbookSelectedSKUs.length }})
+                        <button v-if="!isPublicCatalogMode" @click="openSelectedLookbookModal" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-file-pdf"></i> 生成 PDF 画册
                         </button>
                     </div>
                 </div>
@@ -328,7 +329,7 @@
                                 </button>
                                 <button v-else @click.stop="toggleClientCart(p)" :class="['absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-bold shadow transition flex items-center gap-1', isClientCartSelected(p.sku) ? 'bg-teal-600 text-white' : 'bg-white/90 text-teal-700 hover:bg-white']">
                                     <i :class="['fa-solid', isClientCartSelected(p.sku) ? 'fa-check' : 'fa-plus']"></i>
-                                    <span>{{ isClientCartSelected(p.sku) ? '已挑选' : '选择此款' }}</span>
+                                    <span>{{ isClientCartSelected(p.sku) ? '已挑选中' : '挑选此款' }}</span>
                                 </button>
                             </div>
 
@@ -1199,18 +1200,26 @@
                     this.isPublicCatalogMode = true;
                     this.isLoggedIn = false;
                     await this.fetchPublicProducts();
+
+                    // Check if specific SKUs were selected by sales rep in the share link
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const sharedSkus = urlParams.get('skus');
+                    if (sharedSkus) {
+                        const skuList = sharedSkus.split(',');
+                        this.clientCart = this.products.filter(p => skuList.includes(p.sku)).map(p => ({ ...p, qty: p.moq || 1000 }));
+                    }
                 },
                 exitPublicMode() {
                     this.isPublicCatalogMode = false;
                     window.history.replaceState({}, document.title, window.location.pathname);
                 },
                 copyShareableCatalogLink() {
-                    const shareUrl = window.location.origin + window.location.pathname + '?share=catalog';
+                    let shareUrl = window.location.origin + window.location.pathname + '?share=catalog';
+                    if (this.lookbookSelectedSKUs.length > 0) {
+                        shareUrl += '&skus=' + this.lookbookSelectedSKUs.join(',');
+                    }
                     navigator.clipboard.writeText(shareUrl).then(() => {
-                        alert('已成功复制买家自主选款公开链接至剪贴板！
-链接: ' + shareUrl + '
-
-您可直接发送给客户挑款。');
+                        alert('已成功复制链接！\n\n包含鞋款：' + (this.lookbookSelectedSKUs.length > 0 ? this.lookbookSelectedSKUs.length + '款指定推荐鞋款' : '全部鞋款') + '\n\n链接: ' + shareUrl);
                     }).catch(err => {
                         alert('复制失败，请手动复制链接: ' + shareUrl);
                     });
@@ -1246,13 +1255,13 @@
                 },
                 openClientCartModal() {
                     if (this.clientCart.length === 0) {
-                        return alert('您的挑款清单为空，请先点击图片卡片上的"选择此款"或"加入选款"！');
+                        return alert('挑选清单为空，请先点击鞋款卡片上的"挑选此款"或"加入选款"！');
                     }
                     this.showClientCartPIModal = true;
                 },
                 printClientPI() {
                     if (!this.clientPIForm.company) {
-                        alert('提示：在页面上方填入您的公司/买家名称，导出的报价单将更加规范！');
+                        alert('提示：在表格上方输入您的公司/买家名称后导出更加规范！');
                     }
                     window.print();
                 },
