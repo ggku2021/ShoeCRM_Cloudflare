@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鞋业外贸 CRM 系统 v5.3 - 高级PI导出版</title>
+    <title>鞋业外贸 CRM 系统 v6.0 - 电子画册展示版</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -19,8 +19,8 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
         @media print {
             body * { visibility: hidden; }
-            #pi-printable, #pi-printable *, #tag-printable, #tag-printable * { visibility: visible; }
-            #pi-printable, #tag-printable { position: absolute; left: 0; top: 0; width: 100%; }
+            #pi-printable, #pi-printable *, #tag-printable, #tag-printable *, #lookbook-printable, #lookbook-printable * { visibility: visible; }
+            #pi-printable, #tag-printable, #lookbook-printable { position: absolute; left: 0; top: 0; width: 100%; }
             .no-print { display: none !important; }
         }
     </style>
@@ -35,8 +35,8 @@
                     <div class="inline-flex p-3 bg-blue-100 text-blue-600 rounded-full mb-2">
                         <i class="fa-solid fa-shoe-prints text-3xl"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v5.3</h2>
-                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 预设PI配置 · 灵活排版</p>
+                    <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v6.0</h2>
+                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 电子画册 · 实时汇率 · 电子PI</p>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -64,13 +64,16 @@
                 <i class="fa-solid fa-shoe-prints text-2xl text-blue-400"></i>
                 <div>
                     <h1 class="font-bold text-lg leading-none">ShoeCRM Pro</h1>
-                    <span class="text-xs text-slate-400">外贸鞋业管理 v5.3</span>
+                    <span class="text-xs text-slate-400">外贸鞋业管理 v6.0</span>
                 </div>
             </div>
 
             <nav class="flex-1 space-y-1">
                 <button @click="currentTab = 'dashboard'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
                     <i class="fa-solid fa-chart-pie w-5"></i><span>{{ lang === 'zh' ? '控制台看板' : 'Dashboard' }}</span>
+                </button>
+                <button @click="currentTab = 'lookbook'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition bg-gradient-to-r from-teal-600 to-emerald-600 text-white hover:opacity-90']">
+                    <i class="fa-solid fa-images w-5"></i><span>{{ lang === 'zh' ? '图片展示画册' : 'Product Lookbook' }}</span>
                 </button>
                 <button @click="currentTab = 'customers'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'customers' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
                     <i class="fa-solid fa-users w-5"></i><span>{{ lang === 'zh' ? '客户管理' : 'Customers' }}</span>
@@ -120,11 +123,11 @@
                 <span class="font-bold text-base">ShoeCRM</span>
             </div>
             <div class="flex items-center gap-2">
+                <button @click="currentTab = 'lookbook'" class="text-xs bg-teal-600 text-white px-2 py-1 rounded flex items-center gap-1">
+                    <i class="fa-solid fa-images"></i> 画册
+                </button>
                 <button @click="toggleLang" class="text-xs bg-slate-800 px-2 py-1 rounded">
                     {{ lang === 'zh' ? 'EN' : '中' }}
-                </button>
-                <button @click="currentTab = 'exhibition'" class="text-xs bg-amber-600 text-white px-2 py-1 rounded flex items-center gap-1">
-                    <i class="fa-solid fa-qrcode"></i> 扫码
                 </button>
                 <button @click="logout" class="text-xs text-red-400 underline">退出</button>
             </div>
@@ -133,7 +136,7 @@
         <!-- 主内容区 -->
         <main v-if="isLoggedIn" class="flex-1 p-4 md:p-8 overflow-y-auto pb-24 md:pb-8">
             
-            <!-- 1. 仪表盘 -->
+            <!-- 1. 控制台看板 -->
             <div v-if="currentTab === 'dashboard'" class="space-y-6">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">{{ lang === 'zh' ? '业务数据概览' : 'Business Dashboard' }}</h2>
@@ -230,7 +233,106 @@
                 </div>
             </div>
 
-            <!-- 2. EXHIBITION MODULE -->
+            <!-- 2. 图片展示画册 MODULE (NEW FEATURE) -->
+            <div v-if="currentTab === 'lookbook'" class="space-y-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                            <i class="fa-solid fa-images text-teal-600"></i> 电子图片画册 (Product Lookbook)
+                        </h2>
+                        <p class="text-sm text-gray-500">高清大图大视角，方便直接演示或挑选打包给买家</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <!-- 隐价模式开关 -->
+                        <label class="inline-flex items-center cursor-pointer text-xs font-bold text-slate-700 bg-white px-3 py-2 rounded-lg border shadow-sm">
+                            <input type="checkbox" v-model="lookbookHidePrice" class="sr-only peer">
+                            <div class="relative w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-amber-500"></div>
+                            <span class="ml-2"><i class="fa-solid fa-eye-slash me-1"></i> 隐藏价格 (对外展示)</span>
+                        </label>
+
+                        <!-- 生成专属画册 PDF / 选款单按钮 -->
+                        <button @click="openSelectedLookbookModal" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-file-pdf"></i> 生成所选鞋款电子画册 ({{ lookbookSelectedSKUs.length }})
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 搜索与品类筛选标签 -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <div class="relative flex-1">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-xs"></i>
+                            <input type="text" v-model="lookbookSearch" placeholder="搜索款号 (SKU)、名称、材质、卖点标签..." class="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
+                        </div>
+                        <div class="flex gap-1 overflow-x-auto pb-1 custom-scrollbar">
+                            <button @click="lookbookCategory = ''" :class="['px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition', !lookbookCategory ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200']">
+                                全部品类
+                            </button>
+                            <button v-for="cat in productCategories" :key="cat" @click="lookbookCategory = cat" :class="['px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition', lookbookCategory === cat ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200']">
+                                {{ cat }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 大图画册网格卡片 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div v-for="p in filteredLookbookProducts" :key="p.id" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition duration-300 group flex flex-col justify-between">
+                        <div>
+                            <!-- 高清大图 -->
+                            <div class="relative h-64 w-full bg-slate-100 overflow-hidden cursor-pointer" @click="previewImage(p)">
+                                <img :src="p.image_url || 'https://via.placeholder.com/400x300?text=No+Image'" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                                <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition duration-300 flex items-center justify-center text-white gap-2 font-bold text-xs">
+                                    <i class="fa-solid fa-expand text-lg"></i> 点击放大查看
+                                </div>
+                                <span class="absolute top-3 left-3 bg-slate-900/80 text-white px-2.5 py-1 rounded-md text-xs font-mono font-semibold backdrop-blur">
+                                    {{ p.sku }}
+                                </span>
+                                <!-- 选择画册勾选框 -->
+                                <button @click.stop="toggleLookbookSelection(p.sku)" :class="['absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow transition', isLookbookSelected(p.sku) ? 'bg-teal-600 text-white' : 'bg-white/80 text-gray-400 hover:bg-white']">
+                                    <i class="fa-solid fa-check"></i>
+                                </button>
+                            </div>
+
+                            <div class="p-4 space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <h3 class="font-bold text-gray-800 text-base leading-snug">{{ p.name }}</h3>
+                                </div>
+
+                                <div class="flex flex-wrap gap-1 py-1">
+                                    <span class="bg-teal-50 text-teal-700 text-[10px] px-2 py-0.5 rounded font-medium border border-teal-100">{{ p.category }}</span>
+                                    <span v-if="p.target_market" class="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded font-medium">{{ p.target_market }}</span>
+                                </div>
+
+                                <div class="text-xs text-gray-500 space-y-1 pt-1">
+                                    <p><strong>鞋面材质：</strong>{{ p.upper_material || '未填' }}</p>
+                                    <p><strong>鞋底材质：</strong>{{ p.sole_material || '未填' }}</p>
+                                    <p v-if="p.tags"><strong>卖点特色：</strong><span class="text-blue-600">{{ p.tags }}</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 底部栏与价格 -->
+                        <div class="p-4 pt-0 border-t border-gray-50 flex items-center justify-between mt-2">
+                            <div>
+                                <span class="text-xs text-gray-400 block">参考起订: {{ p.moq }}双</span>
+                                <span v-if="!lookbookHidePrice" class="text-lg font-bold text-emerald-600">${{ p.price }} <span class="text-xs text-gray-400 font-normal">/双</span></span>
+                                <span v-else class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-lock me-1"></i>价格询价</span>
+                            </div>
+                            <button @click="openPIWithSingleProduct(p)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-file-invoice"></i> 转报价PI
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="filteredLookbookProducts.length === 0" class="text-center py-16 bg-white rounded-2xl border text-gray-400">
+                    <i class="fa-solid fa-images text-5xl mb-3 text-gray-300"></i>
+                    <p class="font-medium">暂无匹配的画册鞋款，请切换筛选或在鞋款库中上传。</p>
+                </div>
+            </div>
+
+            <!-- 3. EXHIBITION MODULE -->
             <div v-if="currentTab === 'exhibition'" class="space-y-6">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">展会 / 展厅现场速记与扫码选样</h2>
@@ -250,7 +352,7 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">选择/解搜样品款号 (SKU)</label>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">选择/搜索样品款号 (SKU)</label>
                             <div class="flex gap-2">
                                 <select v-model="exhibitionSelectedSKU" class="w-full border p-2 rounded bg-white text-sm">
                                     <option value="">-- 选择鞋款 --</option>
@@ -313,7 +415,7 @@
                 </div>
             </div>
 
-            <!-- 3. 客户管理 -->
+            <!-- 4. 客户管理 -->
             <div v-if="currentTab === 'customers'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -388,7 +490,7 @@
                 </div>
             </div>
 
-            <!-- 4. 跟进记录 -->
+            <!-- 5. 跟进记录 -->
             <div v-if="currentTab === 'followups'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -444,7 +546,7 @@
                 </div>
             </div>
 
-            <!-- 5. 报价与样品 -->
+            <!-- 6. 报价与样品 -->
             <div v-if="currentTab === 'quotes'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -492,7 +594,7 @@
                 </div>
             </div>
 
-            <!-- 6. 鞋款库 -->
+            <!-- 7. 鞋款库 -->
             <div v-if="currentTab === 'products'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -534,7 +636,7 @@
                 </div>
             </div>
 
-            <!-- 7. 外贸工具与工具箱 -->
+            <!-- 8. 外贸工具与工具箱 -->
             <div v-if="currentTab === 'tools'" class="space-y-6">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">外贸工具箱与报价核算</h2>
@@ -751,76 +853,93 @@
             <button @click="currentTab = 'dashboard'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'dashboard' ? 'text-blue-600 font-bold' : 'text-gray-500']">
                 <i class="fa-solid fa-chart-pie text-lg mb-0.5"></i> 看板
             </button>
+            <button @click="currentTab = 'lookbook'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'lookbook' ? 'text-teal-600 font-bold' : 'text-gray-500']">
+                <i class="fa-solid fa-images text-lg mb-0.5"></i> 画册
+            </button>
             <button @click="currentTab = 'customers'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'customers' ? 'text-blue-600 font-bold' : 'text-gray-500']">
                 <i class="fa-solid fa-users text-lg mb-0.5"></i> 客户
             </button>
             <button @click="currentTab = 'exhibition'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'exhibition' ? 'text-amber-600 font-bold' : 'text-gray-500']">
                 <i class="fa-solid fa-qrcode text-lg mb-0.5"></i> 扫码
             </button>
-            <button @click="currentTab = 'followups'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'followups' ? 'text-blue-600 font-bold' : 'text-gray-500']">
-                <i class="fa-solid fa-comments text-lg mb-0.5"></i> 跟进
-            </button>
             <button @click="currentTab = 'tools'" :class="['flex flex-col items-center text-xs p-1', currentTab === 'tools' ? 'text-blue-600 font-bold' : 'text-gray-500']">
                 <i class="fa-solid fa-calculator text-lg mb-0.5"></i> 工具
             </button>
         </nav>
 
-        <!-- 二维码吊牌弹窗 -->
-        <div v-if="showQRModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-xl max-w-sm w-full p-6 text-center space-y-4">
-                <div id="tag-printable" class="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-white">
-                    <h3 class="font-bold text-lg text-slate-800">{{ selectedQRProduct.name }}</h3>
-                    <p class="text-xs text-gray-500 font-mono">SKU: {{ selectedQRProduct.sku }}</p>
-                    <div class="my-4 flex justify-center">
-                        <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + selectedQRProduct.sku" class="w-36 h-36 border p-1 rounded">
-                    </div>
-                    <p class="text-xs text-gray-600"><strong>Upper:</strong> {{ selectedQRProduct.upper_material }}</p>
-                    <p class="text-xs text-gray-600"><strong>Outsole:</strong> {{ selectedQRProduct.sole_material }}</p>
-                    <p class="text-sm font-bold text-emerald-600 mt-2">FOB Price: ${{ selectedQRProduct.price }} / PR</p>
-                </div>
-                <div class="flex gap-2 no-print">
-                    <button @click="printTag" class="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium">打印样品吊牌</button>
-                    <button @click="showQRModal = false" class="px-4 py-2 border rounded-lg text-gray-600 text-sm">关闭</button>
+        <!-- 图片大图预览 Modal -->
+        <div v-if="previewProductModal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50" @click="previewProductModal = false">
+            <div class="max-w-3xl w-full bg-white rounded-2xl p-4 overflow-hidden relative" @click.stop>
+                <button @click="previewProductModal = false" class="absolute top-4 right-4 bg-slate-900/60 text-white w-8 h-8 rounded-full flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+                <img :src="previewProductData.image_url" class="w-full max-h-[70vh] object-contain rounded-lg">
+                <div class="p-4 space-y-1">
+                    <h3 class="text-xl font-bold text-gray-800">{{ previewProductData.name }}</h3>
+                    <p class="text-xs text-gray-500">款号: {{ previewProductData.sku }} | 品类: {{ previewProductData.category }}</p>
+                    <p class="text-xs text-gray-600">鞋面: {{ previewProductData.upper_material }} | 鞋底: {{ previewProductData.sole_material }}</p>
+                    <p class="text-sm font-bold text-emerald-600 mt-2">${{ previewProductData.price }} /双 (MOQ: {{ previewProductData.moq }}双)</p>
                 </div>
             </div>
         </div>
 
-        <!-- 智能匹配弹窗 -->
-        <div v-if="showMatchModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-gray-800">
-                        为 <span class="text-blue-600">{{ selectedMatchCustomer.company }}</span> 智能推荐鞋款
-                    </h3>
-                    <button @click="showMatchModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+        <!-- 专属选款电子画册 PDF / 导出品弹窗 -->
+        <div v-if="showLookbookExportModal" class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center border-b pb-3 mb-4 no-print">
+                    <h3 class="text-lg font-bold text-gray-800">生成买家专属选款画册 (Product Lookbook)</h3>
+                    <div class="flex gap-2">
+                        <button @click="printLookbook" class="bg-teal-600 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-teal-700 flex items-center gap-1">
+                            <i class="fa-solid fa-print"></i> 打印 / 导出 PDF 画册
+                        </button>
+                        <button @click="showLookbookExportModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                    </div>
                 </div>
-                <div class="bg-blue-50 p-3 rounded-lg text-xs text-blue-800 mb-4">
-                    <p><strong>客户喜好偏好：</strong>{{ selectedMatchCustomer.preferred_styles }} / {{ selectedMatchCustomer.preferences }}</p>
-                    <p><strong>目标价位：</strong>{{ selectedMatchCustomer.target_price }} | <strong>目标市场：</strong>{{ selectedMatchCustomer.target_market }}</p>
-                </div>
-                <div class="space-y-3">
-                    <h4 class="font-bold text-sm text-gray-700">匹配到的鞋款：</h4>
-                    <div v-for="p in matchedProducts" :key="p.id" class="flex items-center gap-4 p-3 border rounded-lg bg-gray-50">
-                        <img :src="p.image_url" class="w-16 h-16 object-cover rounded">
-                        <div class="flex-1 text-xs">
-                            <p class="font-bold text-sm text-gray-800">{{ p.name }} ({{ p.sku }})</p>
-                            <p class="text-gray-500">材质：{{ p.upper_material }} | 价格：${{ p.price }} | MOQ: {{ p.moq }}双</p>
-                            <p class="text-blue-600 mt-1">卖点：{{ p.tags }}</p>
+
+                <!-- Printable Lookbook Area -->
+                <div id="lookbook-printable" class="p-8 bg-white space-y-6 text-gray-800">
+                    <div class="border-b-2 border-slate-900 pb-4 flex justify-between items-end">
+                        <div>
+                            <h1 class="text-3xl font-extrabold text-slate-900 tracking-wide uppercase">FOOTWEAR COLLECTION</h1>
+                            <p class="text-xs text-gray-500 mt-1">SELECTED CATALOG FOR VALUED CLIENT</p>
                         </div>
-                        <button @click="quickAddQuote(selectedMatchCustomer.company, p.sku, p.price)" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs">生成报价记录</button>
+                        <div class="text-right text-xs">
+                            <p class="font-bold text-sm">FOOTWEAR EXPORT CO., LTD.</p>
+                            <p>Date: {{ new Date().toISOString().split('T')[0] }}</p>
+                        </div>
                     </div>
-                    <div v-if="matchedProducts.length === 0" class="text-center py-6 text-gray-400">暂无高度匹配的鞋款，请在鞋款库中添加更多产品。</div>
+
+                    <!-- Selected Products Grid for Print -->
+                    <div class="grid grid-cols-2 gap-6">
+                        <div v-for="sku in lookbookSelectedSKUs" :key="sku" class="border rounded-xl p-4 space-y-3 flex flex-col justify-between">
+                            <div v-if="getProductBySKU(sku)">
+                                <img :src="getProductBySKU(sku).image_url" class="w-full h-48 object-cover rounded-lg mb-3">
+                                <h4 class="font-bold text-base text-slate-900">{{ getProductBySKU(sku).name }}</h4>
+                                <p class="text-xs font-mono font-bold text-teal-700">SKU: {{ sku }}</p>
+                                <div class="text-xs text-gray-600 space-y-1 mt-2">
+                                    <p><strong>Upper:</strong> {{ getProductBySKU(sku).upper_material }}</p>
+                                    <p><strong>Outsole:</strong> {{ getProductBySKU(sku).sole_material }}</p>
+                                    <p><strong>Target:</strong> {{ getProductBySKU(sku).target_market }}</p>
+                                </div>
+                            </div>
+                            <div v-if="!lookbookHidePrice && getProductBySKU(sku)" class="pt-2 border-t flex justify-between text-xs font-bold">
+                                <span>MOQ: {{ getProductBySKU(sku).moq }} Pairs</span>
+                                <span class="text-emerald-600">${{ getProductBySKU(sku).price }} / PR</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-4 text-center text-xs text-gray-400">
+                        <p>FOOTWEAR EXPORT CO., LTD. | Jinjiang, Quanzhou, China | sales@footwearexport.com</p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- 升级版电子 PI (Proforma Invoice) 生成弹窗 - 支持图片开关与鞋款下拉选择/搜索 -->
+        <!-- 电子 PI 导出弹窗 -->
         <div v-if="showPIModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
                 <div class="flex flex-wrap justify-between items-center border-b pb-3 mb-4 no-print gap-2">
                     <h3 class="text-lg font-bold text-gray-800">生成外贸 Proforma Invoice (PI)</h3>
                     <div class="flex items-center gap-4">
-                        <!-- 开关：是否在PI中显示商品图片 -->
                         <label class="inline-flex items-center cursor-pointer text-xs font-semibold text-gray-700">
                             <input type="checkbox" v-model="piForm.showImages" class="sr-only peer">
                             <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
@@ -1098,7 +1217,7 @@
                     currentUser: JSON.parse(localStorage.getItem('shoecrm_user') || '{}'),
                     loginForm: { username: '', password: '' },
                     loginError: '',
-                    currentTab: 'dashboard',
+                    currentTab: 'lookbook',
                     searchQuery: '',
                     filterLevel: '',
                     filterStage: '',
@@ -1109,6 +1228,13 @@
                     showMatchModal: false,
                     showPIModal: false,
                     showQRModal: false,
+                    previewProductModal: false,
+                    previewProductData: {},
+                    showLookbookExportModal: false,
+                    lookbookSelectedSKUs: [],
+                    lookbookHidePrice: false,
+                    lookbookSearch: '',
+                    lookbookCategory: '',
                     selectedQRProduct: {},
                     selectedMatchCustomer: {},
                     matchedProducts: [],
@@ -1165,6 +1291,23 @@
                         const matchesLevel = !this.filterLevel || c.level === this.filterLevel;
                         const matchesStage = !this.filterStage || c.stage === this.filterStage;
                         return matchesSearch && matchesLevel && matchesStage;
+                    });
+                },
+                productCategories() {
+                    const set = new Set();
+                    this.products.forEach(p => { if (p.category) set.add(p.category); });
+                    return Array.from(set);
+                },
+                filteredLookbookProducts() {
+                    return this.products.filter(p => {
+                        const q = this.lookbookSearch.toLowerCase();
+                        const matchesSearch = !q ||
+                            (p.sku && p.sku.toLowerCase().includes(q)) ||
+                            (p.name && p.name.toLowerCase().includes(q)) ||
+                            (p.upper_material && p.upper_material.toLowerCase().includes(q)) ||
+                            (p.tags && p.tags.toLowerCase().includes(q));
+                        const matchesCat = !this.lookbookCategory || p.category === this.lookbookCategory;
+                        return matchesSearch && matchesCat;
                     });
                 },
                 dealCustomersCount() {
@@ -1429,6 +1572,43 @@ Footwear Export Co., Ltd.`;
                     if (interest === '高') return 'bg-emerald-100 text-emerald-800';
                     if (interest === '中') return 'bg-yellow-100 text-yellow-800';
                     return 'bg-gray-100 text-gray-800';
+                },
+                previewImage(p) {
+                    this.previewProductData = p;
+                    this.previewProductModal = true;
+                },
+                toggleLookbookSelection(sku) {
+                    const idx = this.lookbookSelectedSKUs.indexOf(sku);
+                    if (idx > -1) {
+                        this.lookbookSelectedSKUs.splice(idx, 1);
+                    } else {
+                        this.lookbookSelectedSKUs.push(sku);
+                    }
+                },
+                isLookbookSelected(sku) {
+                    return this.lookbookSelectedSKUs.includes(sku);
+                },
+                openSelectedLookbookModal() {
+                    if (this.lookbookSelectedSKUs.length === 0) {
+                        this.lookbookSelectedSKUs = this.filteredLookbookProducts.map(x => x.sku);
+                    }
+                    this.showLookbookExportModal = true;
+                },
+                getProductBySKU(sku) {
+                    return this.products.find(x => x.sku === sku);
+                },
+                printLookbook() {
+                    window.print();
+                },
+                openPIWithSingleProduct(p) {
+                    this.piForm.items = [{
+                        sku: p.sku,
+                        desc: p.name + ' (' + p.upper_material + '/' + p.sole_material + ')',
+                        qty: p.moq || 1000,
+                        price: p.price,
+                        image_url: p.image_url
+                    }];
+                    this.showPIModal = true;
                 },
                 showQRTag(p) {
                     this.selectedQRProduct = p;
