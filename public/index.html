@@ -883,12 +883,26 @@
                         'Authorization': 'Bearer ' + this.token,
                         'Content-Type': 'application/json'
                     };
+                    // 确保 body 被正确转换为 JSON 字符串，防止原生 fetch 自动将 Object 转为 "[object Object]" 导致服务器 JSON 解析报错
+                    if (options.body && typeof options.body !== 'string') {
+                        options.body = JSON.stringify(options.body);
+                    }
                     const res = await fetch(url, options);
                     if (res.status === 401) {
                         this.logout();
                         throw new Error('未授权或登录已过期');
                     }
-                    return await res.json();
+                    const text = await res.text();
+                    let data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch(e) {
+                        throw new Error('服务器响应解析失败: ' + text);
+                    }
+                    if (!res.ok) {
+                        throw new Error(data.detail || data.error || '请求失败');
+                    }
+                    return data;
                 },
                 async fetchAllData() {
                     if (this.isDemoMode) return;

@@ -17,7 +17,22 @@ export async function onRequest(context) {
     }
 
     try {
-        // 0. Diagnostic Debug Endpoint (PUBLIC / 免登录直接访问，方便检查 D1 状态)
+        // Helper to parse JSON body safely
+        async function getJsonBody() {
+            if (method !== 'POST' && method !== 'PUT') return {};
+            try {
+                return await request.json();
+            } catch (e) {
+                try {
+                    const text = await request.text();
+                    return JSON.parse(text);
+                } catch (e2) {
+                    return {};
+                }
+            }
+        }
+
+        // 0. Diagnostic Debug Endpoint (PUBLIC / 免登录直接访问)
         if (path === '/api/debug/db') {
             if (!env.DB) {
                 return new Response(JSON.stringify({
@@ -27,7 +42,6 @@ export async function onRequest(context) {
             }
 
             try {
-                // Check products table count
                 const countRes = await env.DB.prepare('SELECT count(*) as total FROM products').first();
                 const tableInfo = await env.DB.prepare('PRAGMA table_info(products)').all();
                 const sampleProducts = await env.DB.prepare('SELECT * FROM products ORDER BY id DESC LIMIT 5').all();
@@ -52,7 +66,7 @@ export async function onRequest(context) {
         if (path === '/api/scrape-product') {
             let targetUrl = '';
             if (method === 'POST') {
-                const body = await request.json();
+                const body = await getJsonBody();
                 targetUrl = body.url || '';
             } else if (method === 'GET') {
                 targetUrl = url.searchParams.get('url') || '';
@@ -78,7 +92,6 @@ export async function onRequest(context) {
                 let price = 0;
                 let sku = '';
 
-                // Extract SKU / Item ID
                 if (targetUrl.includes('1688.com')) {
                     const match = targetUrl.match(/offer\/(\d+)\.html/);
                     sku = match ? '1688-' + match[1] : '1688-' + Math.floor(100000 + Math.random() * 900000);
@@ -89,13 +102,11 @@ export async function onRequest(context) {
                     sku = 'SKU-' + Math.floor(100000 + Math.random() * 900000);
                 }
 
-                // Extract Title
                 const titleMatch = html.match(/<title>(.*?)<\/title>/i) || html.match(/meta property="og:title" content="(.*?)"/i);
                 if (titleMatch) {
                     name = titleMatch[1].replace(/-1688\.com|-阿里巴巴|-搜鞋网|sooxie\.com/gi, '').trim();
                 }
 
-                // Extract Image
                 const imgMatch = html.match(/meta property="og:image" content="(.*?)"/i) || 
                                  html.match(/<img[^>]+src="(https?:\/\/[^"]+(?:cbu01\.alicdn\.com|sooxie|xiecdn|img)[^"]+\.(?:jpg|png|webp))"/i) ||
                                  html.match(/(https?:\/\/[^"]+\.(?:jpg|png|webp))/i);
@@ -103,7 +114,6 @@ export async function onRequest(context) {
                     image_url = imgMatch[1];
                 }
 
-                // Extract Price
                 const priceMatch = html.match(/"price":"?([\d\.]+)"?/i) || 
                                    html.match(/meta property="og:product:price" content="(.*?)"/i) ||
                                    html.match(/￥\s*([\d\.]+)/) ||
@@ -160,7 +170,7 @@ export async function onRequest(context) {
 
         // 3. Auth Login Route
         if (path === '/api/auth/login' && method === 'POST') {
-            const body = await request.json();
+            const body = await getJsonBody();
             const { username, password } = body;
             if ((username === 'admin' || username === 'sales1') && (password === 'admin123' || password === '123456')) {
                 return new Response(JSON.stringify({
@@ -171,7 +181,7 @@ export async function onRequest(context) {
             return new Response(JSON.stringify({ detail: '账号或密码错误 (默认账号: admin / 密码: admin123)' }), { status: 400, headers });
         }
 
-        // Authentication Check for all other protected APIs (Customers, Followups, Quotes, Products)
+        // Authentication Check for all other protected APIs
         const authHeader = request.headers.get('Authorization');
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return new Response(JSON.stringify({ detail: '未提供有效的登录凭证，请先登录' }), { status: 401, headers });
@@ -188,7 +198,7 @@ export async function onRequest(context) {
                 return new Response(JSON.stringify(results || []), { headers });
             }
             if (method === 'POST') {
-                const b = await request.json();
+                const b = await getJsonBody();
                 const res = await env.DB.prepare(
                     `INSERT INTO customers (company, country, contact, contact_info, level, channel, date, stage, preferred_styles, preferences, target_price, target_market, moq, sales_rep, notes) 
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -217,7 +227,7 @@ export async function onRequest(context) {
                 return new Response(JSON.stringify(results || []), { headers });
             }
             if (method === 'POST') {
-                const b = await request.json();
+                const b = await getJsonBody();
                 const res = await env.DB.prepare(
                     `INSERT INTO followups (company, date, channel, notes, interest, next_date, action, status, sales_rep) 
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -245,7 +255,7 @@ export async function onRequest(context) {
                 return new Response(JSON.stringify(results || []), { headers });
             }
             if (method === 'POST') {
-                const b = await request.json();
+                const b = await getJsonBody();
                 const res = await env.DB.prepare(
                     `INSERT INTO quotes (company, date, sku, price, qty, express_no, status, feedback, sales_rep) 
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -266,7 +276,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 7. Products Endpoint - Resilient & guarantees persistent insert
+        // 7. Products Endpoint
         if (path === '/api/products') {
             if (method === 'GET') {
                 try {
@@ -278,12 +288,10 @@ export async function onRequest(context) {
                 }
             }
             if (method === 'POST') {
-                const b = await request.json();
+                const b = await getJsonBody();
 
                 // Auto-migration: ensure image_url exists
-                try {
-                    await env.DB.prepare('ALTER TABLE products ADD COLUMN image_url TEXT').run();
-                } catch(colErr) {}
+                try { await env.DB.prepare('ALTER TABLE products ADD COLUMN image_url TEXT').run(); } catch(colErr) {}
 
                 try {
                     if (b.id && typeof b.id === 'number' && b.id < 10000000000) {
