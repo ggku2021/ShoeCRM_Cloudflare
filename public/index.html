@@ -745,11 +745,14 @@
                 async saveScrapedProduct() {
                     if (!this.scrapedProduct.name || !this.scrapedProduct.sku) return alert('请检查抓取商品信息！');
                     try {
-                        if (this.isDemoMode) {
-                            this.products.unshift({ id: Date.now(), ...this.scrapedProduct });
-                        } else {
-                            await this.apiFetch('/api/products', { method: 'POST', body: this.scrapedProduct });
-                            this.fetchAllData();
+                        const savedItem = { id: Date.now(), ...this.scrapedProduct };
+                        // 立刻推入本地响应式数组，确保前端界面第一时间渲染出新抓取的商品
+                        this.products.unshift(savedItem);
+
+                        if (!this.isDemoMode) {
+                            const res = await this.apiFetch('/api/products', { method: 'POST', body: this.scrapedProduct });
+                            if (res && res.id) savedItem.id = res.id;
+                            await this.fetchAllData();
                         }
                         this.showScraperModal = false;
                         alert('成功导入保存商品 [' + this.scrapedProduct.sku + '] 至系统鞋款库！');

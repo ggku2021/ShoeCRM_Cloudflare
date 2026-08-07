@@ -107,10 +107,17 @@ export async function onRequest(context) {
 
         // 1. 公开选款商品接口 (免 Auth Token)
         if (path === '/api/public/products' && method === 'GET') {
-            const { results } = await env.DB.prepare(
-                'SELECT id, sku, name, category, price, image_url, upper_material, sole_material, moq, target_market, tags FROM products ORDER BY id DESC'
-            ).all();
-            return new Response(JSON.stringify(results || []), { headers });
+            try {
+                const { results } = await env.DB.prepare(
+                    'SELECT id, sku, name, category, price, image_url, upper_material, sole_material, moq, target_market, tags FROM products ORDER BY id DESC'
+                ).all();
+                return new Response(JSON.stringify(results || []), { headers });
+            } catch (e) {
+                const { results } = await env.DB.prepare(
+                    'SELECT id, sku, name, category, price, upper_material, sole_material, moq, target_market, tags FROM products ORDER BY id DESC'
+                ).all();
+                return new Response(JSON.stringify(results || []), { headers });
+            }
         }
 
         // 2. Auth Login Route
@@ -217,35 +224,69 @@ export async function onRequest(context) {
             }
         }
 
-        // 6. Products Endpoint
+        // 6. Products Endpoint - Resilient to missing image_url column in D1 schema
         if (path === '/api/products') {
             if (method === 'GET') {
-                const { results } = await env.DB.prepare('SELECT * FROM products ORDER BY id DESC').all();
-                return new Response(JSON.stringify(results || []), { headers });
+                try {
+                    const { results } = await env.DB.prepare('SELECT * FROM products ORDER BY id DESC').all();
+                    return new Response(JSON.stringify(results || []), { headers });
+                } catch (e) {
+                    const { results } = await env.DB.prepare('SELECT id, sku, name, category, upper_material, sole_material, price, moq, target_market, tags FROM products ORDER BY id DESC').all();
+                    return new Response(JSON.stringify(results || []), { headers });
+                }
             }
             if (method === 'POST') {
                 const b = await request.json();
-                if (b.id) {
-                    await env.DB.prepare(
-                        `UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=?, image_url=? WHERE id=?`
-                    ).bind(
-                        b.sku || '', b.name || '', b.category || '跑鞋',
-                        b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
-                        Number(b.moq) || 1000, b.target_market || '', b.tags || '',
-                        b.image_url || '', b.id
-                    ).run();
-                    return new Response(JSON.stringify({ success: true, id: b.id }), { headers });
-                } else {
-                    const res = await env.DB.prepare(
-                        `INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-                    ).bind(
-                        b.sku || '', b.name || '', b.category || '跑鞋',
-                        b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
-                        Number(b.moq) || 1000, b.target_market || '', b.tags || '',
-                        b.image_url || ''
-                    ).run();
-                    return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
+                try {
+                    // Try adding image_url column automatically if it doesn't exist
+                    try {
+                        await env.DB.prepare('ALTER TABLE products ADD COLUMN image_url TEXT').run();
+                    } catch(colErr) {}
+
+                    if (b.id) {
+                        await env.DB.prepare(
+                            `UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=?, image_url=? WHERE id=?`
+                        ).bind(
+                            b.sku || '', b.name || '', b.category || '跑鞋',
+                            b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
+                            Number(b.moq) || 1000, b.target_market || '', b.tags || '',
+                            b.image_url || '', b.id
+                        ).run();
+                        return new Response(JSON.stringify({ success: true, id: b.id }), { headers });
+                    } else {
+                        const res = await env.DB.prepare(
+                            `INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url) 
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                        ).bind(
+                            b.sku || '', b.name || '', b.category || '跑鞋',
+                            b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
+                            Number(b.moq) || 1000, b.target_market || '', b.tags || '',
+                            b.image_url || ''
+                        ).run();
+                        return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
+                    }
+                } catch (d1Err) {
+                    // Fallback insert if image_url column fails
+                    if (b.id) {
+                        await env.DB.prepare(
+                            `UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=? WHERE id=?`
+                        ).bind(
+                            b.sku || '', b.name || '', b.category || '跑鞋',
+                            b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
+                            Number(b.moq) || 1000, b.target_market || '', b.tags || '', b.id
+                        ).run();
+                        return new Response(JSON.stringify({ success: true, id: b.id }), { headers });
+                    } else {
+                        const res = await env.DB.prepare(
+                            `INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags) 
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                        ).bind(
+                            b.sku || '', b.name || '', b.category || '跑鞋',
+                            b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
+                            Number(b.moq) || 1000, b.target_market || '', b.tags || ''
+                        ).run();
+                        return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
+                    }
                 }
             }
         }
