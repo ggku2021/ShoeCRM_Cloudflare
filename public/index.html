@@ -3,15 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Footwear Export Catalog & ShoeCRM Pro v7.1</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Vue.js 3 -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- HTML5 QR Code Scanner -->
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <title>Footwear Export Catalog & ShoeCRM Pro v7.2</title>
+    <!-- 国内高可用 CDN (BootCDN / Staticfile) -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.bootcdn.net/ajax/libs/vue/3.3.4/vue.global.prod.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    
+    <!-- 备用 CDN 回退加载，防止个别网络打不开 -->
+    <script>
+        if (typeof Vue === 'undefined') {
+            document.write('<script src="https://lib.baomitu.com/vue/3.3.4/vue.global.prod.js"><\/script>');
+        }
+    </script>
     <style>
         [v-cloak] { display: none !important; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -26,6 +30,24 @@
     </style>
 </head>
 <body class="bg-gray-100 text-slate-800 font-sans antialiased">
+
+    <!-- 防白屏回退脚手架 (如果Vue因意外未加载完成，3秒后自动显示提示) -->
+    <div id="fallback-error" class="hidden fixed inset-0 bg-white flex flex-col items-center justify-center p-6 text-center z-50">
+        <div class="p-4 bg-red-100 text-red-600 rounded-full mb-3"><i class="fa-solid fa-triangle-exclamation text-3xl"></i></div>
+        <h3 class="text-xl font-bold text-gray-800">页面加载异常或网络被阻断</h3>
+        <p class="text-sm text-gray-500 mt-2 max-w-md">如果页面长时间无响应，请尝试清除浏览器缓存，或检查静态资源网络连接。</p>
+        <button onclick="location.reload()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">刷新页面</button>
+    </div>
+
+    <script>
+        setTimeout(function() {
+            if (typeof Vue === 'undefined' || !document.getElementById('app').__vue_app__) {
+                const el = document.getElementById('fallback-error');
+                if (el) el.classList.remove('hidden');
+            }
+        }, 3500);
+    </script>
+
     <div id="app" v-cloak class="min-h-screen flex flex-col md:flex-row">
 
         <!-- 登录弹窗 (仅在管理员/业务员非公开分享模式时显示) -->
@@ -35,8 +57,8 @@
                     <div class="inline-flex p-3 bg-blue-100 text-blue-600 rounded-full mb-2">
                         <i class="fa-solid fa-shoe-prints text-3xl"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v7.1</h2>
-                    <p class="text-sm text-gray-500 mt-1">外贸鞋业管理 · 可分享画册 · 自助选款PI</p>
+                    <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v7.2</h2>
+                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 防白屏· 可分享画册 · 自助选款PI</p>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -65,7 +87,7 @@
                 <i class="fa-solid fa-shoe-prints text-2xl text-blue-400"></i>
                 <div>
                     <h1 class="font-bold text-lg leading-none">ShoeCRM Pro</h1>
-                    <span class="text-xs text-slate-400">外贸鞋业管理 v7.1</span>
+                    <span class="text-xs text-slate-400">外贸鞋业管理 v7.2</span>
                 </div>
             </div>
 
@@ -111,7 +133,7 @@
                     </button>
                 </div>
                 <div class="flex items-center justify-between px-2 py-1 border-t border-slate-800 pt-2">
-                    <span><i class="fa-solid fa-user-check me-1"></i> {{ currentUser.name }}</span>
+                    <span><i class="fa-solid fa-user-check me-1"></i> {{ currentUser.name || '已登录' }}</span>
                     <button @click="logout" class="text-red-400 hover:underline">退出</button>
                 </div>
             </div>
@@ -221,7 +243,7 @@
                 </div>
             </div>
 
-            <!-- 2. 图片展示画册 MODULE (支持管理端与买家公开选款端) -->
+            <!-- 2. 图片展示画册 MODULE -->
             <div v-if="currentTab === 'lookbook' || isPublicCatalogMode" class="space-y-6">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
@@ -1093,6 +1115,17 @@
     </div>
 
     <script>
+        // 辅助防御安全解析 helper (防止 localStorage 'undefined' 崩溃)
+        function getSafeUser() {
+            try {
+                const u = localStorage.getItem('shoecrm_user');
+                if (!u || u === 'undefined') return {};
+                return JSON.parse(u);
+            } catch (e) {
+                return {};
+            }
+        }
+
         const { createApp } = Vue;
 
         createApp({
@@ -1104,7 +1137,7 @@
                     isPublicCatalogMode: false,
                     isFetchingRate: false,
                     token: localStorage.getItem('shoecrm_token') || '',
-                    currentUser: JSON.parse(localStorage.getItem('shoecrm_user') || '{}'),
+                    currentUser: getSafeUser(),
                     loginForm: { username: '', password: '' },
                     loginError: '',
                     currentTab: 'lookbook',
@@ -1456,34 +1489,22 @@ Footwear Export Co., Ltd.`;
                     this.previewProductData = p;
                     this.previewProductModal = true;
                 },
-                printPI() {
-                    window.print();
-                },
-                showQRTag(p) {
-                    this.selectedQRProduct = p;
-                    this.showQRModal = true;
-                },
-                printTag() {
-                    window.print();
-                },
+                printPI() { window.print(); },
+                showQRTag(p) { this.selectedQRProduct = p; this.showQRModal = true; },
+                printTag() { window.print(); },
                 addSelectedProductToCart() {
                     if (!this.exhibitionSelectedSKU) return;
                     const p = this.products.find(x => x.sku === this.exhibitionSelectedSKU);
                     if (p) {
                         const existing = this.exhibitionCart.find(x => x.sku === p.sku);
-                        if (existing) {
-                            existing.qty += 1000;
-                        } else {
-                            this.exhibitionCart.push({ ...p, qty: p.moq || 1000 });
-                        }
+                        if (existing) { existing.qty += 1000; }
+                        else { this.exhibitionCart.push({ ...p, qty: p.moq || 1000 }); }
                     }
                 },
                 toggleCamera() {
                     if (this.isCameraActive) {
                         if (this.html5QrCode) {
-                            this.html5QrCode.stop().then(() => {
-                                this.isCameraActive = false;
-                            });
+                            this.html5QrCode.stop().then(() => { this.isCameraActive = false; });
                         }
                     } else {
                         this.isCameraActive = true;
@@ -1509,9 +1530,7 @@ Footwear Export Co., Ltd.`;
                     const file = e.target.files[0];
                     if (!file) return;
                     const reader = new FileReader();
-                    reader.onload = (event) => {
-                        this.newProduct.image_url = event.target.result;
-                    };
+                    reader.onload = (event) => { this.newProduct.image_url = event.target.result; };
                     reader.readAsDataURL(file);
                 },
                 batchCreateQuotes() {
@@ -1550,9 +1569,7 @@ Footwear Export Co., Ltd.`;
                     }
                     this.showMatchModal = true;
                 },
-                openPIModal() {
-                    this.showPIModal = true;
-                },
+                openPIModal() { this.showPIModal = true; },
                 onPICompanyChange() {
                     const c = this.customers.find(item => item.company === this.piForm.selectedCompany);
                     if (c) {
@@ -1571,31 +1588,18 @@ Footwear Export Co., Ltd.`;
                     });
                     this.selectedProductToAdd = null;
                 },
-                addPIItem() {
-                    this.piForm.items.push({ sku: '', desc: '', qty: 500, price: 10.0, image_url: '' });
-                },
-                removePIItem(idx) {
-                    this.piForm.items.splice(idx, 1);
-                },
+                addPIItem() { this.piForm.items.push({ sku: '', desc: '', qty: 500, price: 10.0, image_url: '' }); },
+                removePIItem(idx) { this.piForm.items.splice(idx, 1); },
                 copyTemplateText() {
                     const fullText = `Subject: ${this.generatedEmailSubject}
 
 ${this.generatedEmailBody}`;
-                    navigator.clipboard.writeText(fullText).then(() => {
-                        alert('已成功复制邮件主题和正文至剪贴板！');
-                    });
+                    navigator.clipboard.writeText(fullText).then(() => { alert('已成功复制邮件主题和正文至剪贴板！'); });
                 },
                 quickAddQuote(company, sku, price, qty = 1000) {
                     this.newQuote = {
-                        company: company,
-                        date: new Date().toISOString().split('T')[0],
-                        sku: sku,
-                        price: price,
-                        qty: qty,
-                        express_no: '',
-                        status: '已发送报价',
-                        feedback: '展会/推荐加购',
-                        sales_rep: this.currentUser.name
+                        company: company, date: new Date().toISOString().split('T')[0], sku: sku, price: price, qty: qty,
+                        express_no: '', status: '已发送报价', feedback: '展会/推荐加购', sales_rep: this.currentUser.name
                     };
                     this.saveQuote();
                 },
@@ -1611,132 +1615,84 @@ ${this.generatedEmailBody}`;
                 async saveCustomer() {
                     if (!this.editingCustomer.company) return alert('请填写公司名称！');
                     try {
-                        if (this.isDemoMode) {
-                            this.customers.unshift({ id: Date.now(), ...this.editingCustomer });
-                        } else {
-                            await this.apiFetch('/api/customers', { method: 'POST', body: this.editingCustomer });
-                            this.fetchAllData();
-                        }
+                        if (this.isDemoMode) { this.customers.unshift({ id: Date.now(), ...this.editingCustomer }); }
+                        else { await this.apiFetch('/api/customers', { method: 'POST', body: this.editingCustomer }); this.fetchAllData(); }
                         this.showCustomerModal = false;
-                    } catch (e) {
-                        alert('保存客户信息失败：' + e.message);
-                    }
+                    } catch (e) { alert('保存客户信息失败：' + e.message); }
                 },
                 async deleteCustomer(id) {
                     if (confirm('确定要删除该客户吗？')) {
-                        if (this.isDemoMode) {
-                            this.customers = this.customers.filter(x => x.id !== id);
-                        } else {
-                            await this.apiFetch('/api/customers/' + id, { method: 'DELETE' });
-                            this.fetchAllData();
-                        }
+                        if (this.isDemoMode) { this.customers = this.customers.filter(x => x.id !== id); }
+                        else { await this.apiFetch('/api/customers/' + id, { method: 'DELETE' }); this.fetchAllData(); }
                     }
                 },
                 openFollowupModal() {
                     this.newFollowup = {
                         company: this.customers[0] ? this.customers[0].company : '',
-                        date: new Date().toISOString().split('T')[0],
-                        channel: 'WhatsApp', notes: '', interest: '中', next_date: '', action: '', status: '进行中', sales_rep: this.currentUser.name
+                        date: new Date().toISOString().split('T')[0], channel: 'WhatsApp', notes: '', interest: '中', next_date: '', action: '', status: '进行中', sales_rep: this.currentUser.name
                     };
                     this.showFollowupModal = true;
                 },
                 async saveFollowup() {
                     try {
-                        if (this.isDemoMode) {
-                            this.followups.unshift({ id: Date.now(), ...this.newFollowup });
-                        } else {
-                            await this.apiFetch('/api/followups', { method: 'POST', body: this.newFollowup });
-                            this.fetchAllData();
-                        }
+                        if (this.isDemoMode) { this.followups.unshift({ id: Date.now(), ...this.newFollowup }); }
+                        else { await this.apiFetch('/api/followups', { method: 'POST', body: this.newFollowup }); this.fetchAllData(); }
                         this.showFollowupModal = false;
-                    } catch (e) {
-                        alert('保存跟进记录失败：' + e.message);
-                    }
+                    } catch (e) { alert('保存跟进记录失败：' + e.message); }
                 },
                 async deleteFollowup(id) {
                     if (confirm('确定删除此跟进记录吗？')) {
-                        if (this.isDemoMode) {
-                            this.followups = this.followups.filter(x => x.id !== id);
-                        } else {
-                            await this.apiFetch('/api/followups/' + id, { method: 'DELETE' });
-                            this.fetchAllData();
-                        }
+                        if (this.isDemoMode) { this.followups = this.followups.filter(x => x.id !== id); }
+                        else { await this.apiFetch('/api/followups/' + id, { method: 'DELETE' }); this.fetchAllData(); }
                     }
                 },
                 openQuoteModal() {
                     this.newQuote = {
                         company: this.customers[0] ? this.customers[0].company : '',
-                        date: new Date().toISOString().split('T')[0],
-                        sku: '', price: 0, qty: 1000, express_no: '', status: '已发送报价', feedback: '', sales_rep: this.currentUser.name
+                        date: new Date().toISOString().split('T')[0], sku: '', price: 0, qty: 1000, express_no: '', status: '已发送报价', feedback: '', sales_rep: this.currentUser.name
                     };
                     this.showQuoteModal = true;
                 },
                 async saveQuote() {
                     try {
-                        if (this.isDemoMode) {
-                            this.quotes.unshift({ id: Date.now(), ...this.newQuote });
-                        } else {
-                            await this.apiFetch('/api/quotes', { method: 'POST', body: this.newQuote });
-                            this.fetchAllData();
-                        }
+                        if (this.isDemoMode) { this.quotes.unshift({ id: Date.now(), ...this.newQuote }); }
+                        else { await this.apiFetch('/api/quotes', { method: 'POST', body: this.newQuote }); this.fetchAllData(); }
                         this.showQuoteModal = false;
-                    } catch (e) {
-                        alert('保存报价失败：' + e.message);
-                    }
+                    } catch (e) { alert('保存报价失败：' + e.message); }
                 },
                 async deleteQuote(id) {
                     if (confirm('确定删除此报价记录吗？')) {
-                        if (this.isDemoMode) {
-                            this.quotes = this.quotes.filter(x => x.id !== id);
-                        } else {
-                            await this.apiFetch('/api/quotes/' + id, { method: 'DELETE' });
-                            this.fetchAllData();
-                        }
+                        if (this.isDemoMode) { this.quotes = this.quotes.filter(x => x.id !== id); }
+                        else { await this.apiFetch('/api/quotes/' + id, { method: 'DELETE' }); this.fetchAllData(); }
                     }
                 },
                 openProductModal(p = null) {
-                    if (p) {
-                        this.newProduct = JSON.parse(JSON.stringify(p));
-                    } else {
-                        this.newProduct = {
-                            id: null,
-                            sku: 'SKU-', name: '', category: '跑鞋', upper_material: '',
-                            sole_material: '', price: 0, moq: 1000, target_market: '', tags: '',
-                            image_url: ''
-                        };
+                    if (p) { this.newProduct = JSON.parse(JSON.stringify(p)); }
+                    else {
+                        this.newProduct = { id: null, sku: 'SKU-', name: '', category: '跑鞋', upper_material: '', sole_material: '', price: 0, moq: 1000, target_market: '', tags: '', image_url: '' };
                     }
                     this.showProductModal = true;
                 },
                 async saveProduct() {
-                    if (!this.newProduct.sku || !this.newProduct.name) {
-                        return alert('请填写款号 (SKU) 和 鞋款名称！');
-                    }
+                    if (!this.newProduct.sku || !this.newProduct.name) { return alert('请填写款号 (SKU) 和 鞋款名称！'); }
                     try {
                         if (this.isDemoMode) {
                             if (this.newProduct.id) {
                                 const idx = this.products.findIndex(x => x.id === this.newProduct.id);
                                 if (idx !== -1) this.products[idx] = { ...this.newProduct };
-                            } else {
-                                this.products.unshift({ id: Date.now(), ...this.newProduct });
-                            }
+                            } else { this.products.unshift({ id: Date.now(), ...this.newProduct }); }
                         } else {
                             await this.apiFetch('/api/products', { method: 'POST', body: this.newProduct });
                             this.fetchAllData();
                         }
                         this.showProductModal = false;
                         alert('鞋款信息保存成功！');
-                    } catch (e) {
-                        alert('保存失败：' + e.message);
-                    }
+                    } catch (e) { alert('保存失败：' + e.message); }
                 },
                 async deleteProduct(id) {
                     if (confirm('确定删除此鞋款吗？')) {
-                        if (this.isDemoMode) {
-                            this.products = this.products.filter(x => x.id !== id);
-                        } else {
-                            await this.apiFetch('/api/products/' + id, { method: 'DELETE' });
-                            this.fetchAllData();
-                        }
+                        if (this.isDemoMode) { this.products = this.products.filter(x => x.id !== id); }
+                        else { await this.apiFetch('/api/products/' + id, { method: 'DELETE' }); this.fetchAllData(); }
                     }
                 }
             }
