@@ -62,7 +62,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 1. 1688 / 搜鞋网 (sooxie.com) 商品一键抓取接口 (免登录)
+        // 1. 1688 / 搜鞋网 (sooxie.com) 高精度主图与商品一键抓取接口
         if (path === '/api/scrape-product') {
             let targetUrl = '';
             if (method === 'POST') {
@@ -92,6 +92,7 @@ export async function onRequest(context) {
                 let price = 0;
                 let sku = '';
 
+                // 1. Extract SKU / Item ID
                 if (targetUrl.includes('1688.com')) {
                     const match = targetUrl.match(/offer\/(\d+)\.html/);
                     sku = match ? '1688-' + match[1] : '1688-' + Math.floor(100000 + Math.random() * 900000);
@@ -102,18 +103,59 @@ export async function onRequest(context) {
                     sku = 'SKU-' + Math.floor(100000 + Math.random() * 900000);
                 }
 
+                // 2. Extract Title
                 const titleMatch = html.match(/<title>(.*?)<\/title>/i) || html.match(/meta property="og:title" content="(.*?)"/i);
                 if (titleMatch) {
                     name = titleMatch[1].replace(/-1688\.com|-阿里巴巴|-搜鞋网|sooxie\.com/gi, '').trim();
                 }
 
-                const imgMatch = html.match(/meta property="og:image" content="(.*?)"/i) || 
-                                 html.match(/<img[^>]+src="(https?:\/\/[^"]+(?:cbu01\.alicdn\.com|sooxie|xiecdn|img)[^"]+\.(?:jpg|png|webp))"/i) ||
-                                 html.match(/(https?:\/\/[^"]+\.(?:jpg|png|webp))/i);
-                if (imgMatch) {
-                    image_url = imgMatch[1];
+                // 3. Extract Real Product Main Image (Smart Filtering Bad Platform Banners/Sprites like -tps- or 60000000)
+                const badKeywords = ['-tps-', '60000000', 'sprite', 'logo', 'banner', 'header', 'icon', 'avatar', 'watermark'];
+
+                // 3a. Check 1688 cbu01 CDN main images
+                const cbuMatches = html.match(/https?:\/\/cbu01\.alicdn\.com\/img\/ibank\/[^\s"'<>]+?\.(?:jpg|jpeg|webp|png)/gi) || [];
+                for (const img of cbuMatches) {
+                    if (!badKeywords.some(b => img.includes(b))) {
+                        image_url = img;
+                        break;
+                    }
                 }
 
+                // 3b. Check JSON imageUrl / offerImage / mainImage
+                if (!image_url) {
+                    const jsonMatches = html.match(/"(?:imageUrl|offerImage|mainImage|fullPathImageURI)":"(https?:\/\/[^"]+)"/gi) || [];
+                    for (const m of jsonMatches) {
+                        const cleanUrl = m.split('":"')[1].replace(/"/g, '').replace(/\\\//g, '/');
+                        if (!badKeywords.some(b => cleanUrl.includes(b))) {
+                            image_url = cleanUrl;
+                            break;
+                        }
+                    }
+                }
+
+                // 3c. Check Sooxie / xiecdn image
+                if (!image_url) {
+                    const sooxieMatches = html.match(/https?:\/\/(?:images\.xiecdn\.com|www\.sooxie\.com\/upload)[^\s"'<>]+?\.(?:jpg|jpeg|webp|png)/gi) || [];
+                    for (const img of sooxieMatches) {
+                        if (!badKeywords.some(b => img.includes(b))) {
+                            image_url = img;
+                            break;
+                        }
+                    }
+                }
+
+                // 3d. Fallback imgextra .jpg
+                if (!image_url) {
+                    const extraMatches = html.match(/https?:\/\/img\.alicdn\.com\/imgextra\/[^\s"'<>]+?\.(?:jpg|jpeg|webp)/gi) || [];
+                    for (const img of extraMatches) {
+                        if (!badKeywords.some(b => img.includes(b))) {
+                            image_url = img;
+                            break;
+                        }
+                    }
+                }
+
+                // 4. Extract Price
                 const priceMatch = html.match(/"price":"?([\d\.]+)"?/i) || 
                                    html.match(/meta property="og:product:price" content="(.*?)"/i) ||
                                    html.match(/￥\s*([\d\.]+)/) ||
