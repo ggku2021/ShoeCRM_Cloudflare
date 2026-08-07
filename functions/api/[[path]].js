@@ -17,7 +17,7 @@ export async function onRequest(context) {
     }
 
     try {
-        // Diagnostic Debug Endpoint to check D1 Database connection & table status
+        // 0. Diagnostic Debug Endpoint (PUBLIC / 免登录直接访问，方便检查 D1 状态)
         if (path === '/api/debug/db') {
             if (!env.DB) {
                 return new Response(JSON.stringify({
@@ -34,7 +34,7 @@ export async function onRequest(context) {
 
                 return new Response(JSON.stringify({
                     status: 'ok',
-                    message: 'D1 数据库绑定正常！',
+                    message: 'D1 数据库绑定与查询完全正常！',
                     total_products: countRes ? countRes.total : 0,
                     columns: tableInfo ? tableInfo.results : [],
                     latest_products: sampleProducts ? sampleProducts.results : []
@@ -48,7 +48,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 0. 1688 / 搜鞋网 (sooxie.com) 商品一键抓取接口
+        // 1. 1688 / 搜鞋网 (sooxie.com) 商品一键抓取接口 (免登录)
         if (path === '/api/scrape-product') {
             let targetUrl = '';
             if (method === 'POST') {
@@ -136,7 +136,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 1. 公开选款商品接口 (免 Auth Token)
+        // 2. 公开选款商品接口 (免 Auth Token)
         if (path === '/api/public/products' && method === 'GET') {
             if (!env.DB) {
                 return new Response(JSON.stringify([]), { headers });
@@ -158,7 +158,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 2. Auth Login Route
+        // 3. Auth Login Route
         if (path === '/api/auth/login' && method === 'POST') {
             const body = await request.json();
             const { username, password } = body;
@@ -171,7 +171,7 @@ export async function onRequest(context) {
             return new Response(JSON.stringify({ detail: '账号或密码错误 (默认账号: admin / 密码: admin123)' }), { status: 400, headers });
         }
 
-        // Authentication Check for all other protected APIs
+        // Authentication Check for all other protected APIs (Customers, Followups, Quotes, Products)
         const authHeader = request.headers.get('Authorization');
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return new Response(JSON.stringify({ detail: '未提供有效的登录凭证，请先登录' }), { status: 401, headers });
@@ -181,7 +181,7 @@ export async function onRequest(context) {
             return new Response(JSON.stringify({ error: '未绑定 Cloudflare D1 数据库 (env.DB)' }), { status: 500, headers });
         }
 
-        // 3. Customers Endpoint
+        // 4. Customers Endpoint
         if (path === '/api/customers') {
             if (method === 'GET') {
                 const { results } = await env.DB.prepare('SELECT * FROM customers ORDER BY id DESC').all();
@@ -210,7 +210,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 4. Followups Endpoint
+        // 5. Followups Endpoint
         if (path === '/api/followups') {
             if (method === 'GET') {
                 const { results } = await env.DB.prepare('SELECT * FROM followups ORDER BY id DESC').all();
@@ -238,7 +238,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 5. Quotes Endpoint
+        // 6. Quotes Endpoint
         if (path === '/api/quotes') {
             if (method === 'GET') {
                 const { results } = await env.DB.prepare('SELECT * FROM quotes ORDER BY id DESC').all();
@@ -266,7 +266,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 6. Products Endpoint - Strict error reporting to verify D1 SQL writes
+        // 7. Products Endpoint - Resilient & guarantees persistent insert
         if (path === '/api/products') {
             if (method === 'GET') {
                 try {
@@ -280,8 +280,10 @@ export async function onRequest(context) {
             if (method === 'POST') {
                 const b = await request.json();
 
-                // 尝试建增 image_url 列
-                try { await env.DB.prepare('ALTER TABLE products ADD COLUMN image_url TEXT').run(); } catch(colErr) {}
+                // Auto-migration: ensure image_url exists
+                try {
+                    await env.DB.prepare('ALTER TABLE products ADD COLUMN image_url TEXT').run();
+                } catch(colErr) {}
 
                 try {
                     if (b.id && typeof b.id === 'number' && b.id < 10000000000) {
@@ -308,7 +310,6 @@ export async function onRequest(context) {
                         return new Response(JSON.stringify({ success: true, id: lastId }), { headers });
                     }
                 } catch (d1Err) {
-                    // 如果含 image_url 写入报错，尝试降级不写 image_url
                     try {
                         const res = await env.DB.prepare(
                             `INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags) 
