@@ -41,7 +41,15 @@ export async function onRequest(context) {
       return jsonResponse({ error: "D1 Database binding 'DB' not found." }, 500);
     }
 
-    // Auth Helper
+    // Route: /api/public/products (NO AUTH REQUIRED for public shared catalog)
+    if (path === "/api/public/products" && request.method === "GET") {
+      const { results } = await db.prepare(
+        "SELECT id, sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url FROM products ORDER BY id DESC"
+      ).all();
+      return jsonResponse(results || []);
+    }
+
+    // Auth Helper for internal routes
     const authHeader = request.headers.get("Authorization");
     let currentUser = null;
     if (authHeader && authHeader.startsWith("Bearer ")) {
@@ -74,7 +82,7 @@ export async function onRequest(context) {
       });
     }
 
-    // Require Auth for subsequent endpoints
+    // Require Auth for subsequent protected endpoints
     if (!currentUser && path.startsWith("/api/")) {
       return jsonResponse({ detail: "未登录或登录超时" }, 401);
     }
@@ -178,7 +186,7 @@ export async function onRequest(context) {
       if (request.method === "POST") {
         const b = await request.json();
         if (b.id) {
-          // Update existing
+          // Update
           await db.prepare(`
             UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=?, image_url=?
             WHERE id=?
@@ -188,7 +196,7 @@ export async function onRequest(context) {
           ).run();
           return jsonResponse({ message: "鞋款修改成功" });
         } else {
-          // Insert new
+          // Insert
           await db.prepare(`
             INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
