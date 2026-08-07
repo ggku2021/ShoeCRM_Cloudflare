@@ -1,223 +1,178 @@
-
-// Cloudflare Pages Function - API Handler with D1 Database & Crypto Web API
-async function hashPassword(password, salt) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + salt);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-function jsonResponse(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
-    }
-  });
-}
-
+// Cloudflare Pages Function - ShoeCRM Pro API Router
 export async function onRequest(context) {
-  try {
     const { request, env } = context;
     const url = new URL(request.url);
     const path = url.pathname;
+    const method = request.method;
 
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+    const headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+
+    if (method === 'OPTIONS') {
+        return new Response(null, { headers });
+    }
+
+    try {
+        // 1. 公开选款商品接口 (免 Auth Token)
+        if (path === '/api/public/products' && method === 'GET') {
+            const { results } = await env.DB.prepare(
+                'SELECT id, sku, name, category, price, image_url, upper_material, sole_material, moq, target_market, tags FROM products ORDER BY id DESC'
+            ).all();
+            return new Response(JSON.stringify(results || []), { headers });
         }
-      });
-    }
 
-    const db = env.DB;
-    if (!db) {
-      return jsonResponse({ error: "D1 Database binding 'DB' not found." }, 500);
-    }
-
-    // Route: /api/public/products (NO AUTH REQUIRED for public shared catalog)
-    if (path === "/api/public/products" && request.method === "GET") {
-      const { results } = await db.prepare(
-        "SELECT id, sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url FROM products ORDER BY id DESC"
-      ).all();
-      return jsonResponse(results || []);
-    }
-
-    // Auth Helper for internal routes
-    const authHeader = request.headers.get("Authorization");
-    let currentUser = null;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.split(" ")[1];
-      const userRow = await db.prepare(
-        "SELECT users.* FROM tokens JOIN users ON tokens.user_id = users.id WHERE tokens.token = ?"
-      ).bind(token).first();
-      if (userRow) {
-        currentUser = userRow;
-      }
-    }
-
-    // Route: /api/auth/login
-    if (path === "/api/auth/login" && request.method === "POST") {
-      const body = await request.json();
-      const user = await db.prepare("SELECT * FROM users WHERE username = ?").bind(body.username).first();
-      if (!user) {
-        return jsonResponse({ detail: "用户名或密码错误" }, 400);
-      }
-      const hashed = await hashPassword(body.password, user.salt);
-      if (hashed !== user.password_hash) {
-        return jsonResponse({ detail: "用户名或密码错误" }, 400);
-      }
-      const token = crypto.randomUUID();
-      await db.prepare("INSERT INTO tokens (token, user_id, created_at) VALUES (?, ?, ?)").bind(token, user.id, new Date().toISOString()).run();
-
-      return jsonResponse({
-        token: token,
-        user: { id: user.id, username: user.username, name: user.name, role: user.role }
-      });
-    }
-
-    // Require Auth for subsequent protected endpoints
-    if (!currentUser && path.startsWith("/api/")) {
-      return jsonResponse({ detail: "未登录或登录超时" }, 401);
-    }
-
-    // Route: /api/auth/me
-    if (path === "/api/auth/me" && request.method === "GET") {
-      return jsonResponse({ id: currentUser.id, username: currentUser.username, name: currentUser.name, role: currentUser.role });
-    }
-
-    // Route: /api/customers
-    if (path === "/api/customers") {
-      if (request.method === "GET") {
-        let query = currentUser.role === "admin" 
-          ? "SELECT * FROM customers ORDER BY id DESC"
-          : "SELECT * FROM customers WHERE created_by = ? OR sales_rep = ? ORDER BY id DESC";
-        const stmt = currentUser.role === "admin" 
-          ? db.prepare(query)
-          : db.prepare(query).bind(currentUser.id, currentUser.name);
-        const { results } = await stmt.all();
-        return jsonResponse(results || []);
-      }
-      if (request.method === "POST") {
-        const b = await request.json();
-        await db.prepare(`
-          INSERT INTO customers (company, country, contact, contact_info, level, channel, date, stage, preferred_styles, preferences, target_price, target_market, moq, sales_rep, notes, created_by)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).bind(
-          b.company || "", b.country || "", b.contact || "", b.contact_info || "",
-          b.level || "普通客户", b.channel || "其他", b.date || "", b.stage || "初次接触",
-          b.preferred_styles || "", b.preferences || "", b.target_price || "",
-          b.target_market || "", b.moq || "", b.sales_rep || currentUser.name, b.notes || "", currentUser.id
-        ).run();
-        return jsonResponse({ message: "添加成功" });
-      }
-    }
-
-    if (path.startsWith("/api/customers/") && request.method === "DELETE") {
-      const id = path.split("/").pop();
-      await db.prepare("DELETE FROM customers WHERE id = ?").bind(id).run();
-      return jsonResponse({ message: "已删除" });
-    }
-
-    // Route: /api/followups
-    if (path === "/api/followups") {
-      if (request.method === "GET") {
-        const { results } = await db.prepare("SELECT * FROM followups ORDER BY id DESC").all();
-        return jsonResponse(results || []);
-      }
-      if (request.method === "POST") {
-        const b = await request.json();
-        await db.prepare(`
-          INSERT INTO followups (company, date, channel, notes, interest, next_date, action, status, sales_rep, created_by)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).bind(
-          b.company || "", b.date || "", b.channel || "WhatsApp", b.notes || "",
-          b.interest || "中", b.next_date || "", b.action || "", b.status || "进行中",
-          b.sales_rep || currentUser.name, currentUser.id
-        ).run();
-        return jsonResponse({ message: "跟进记录已保存" });
-      }
-    }
-
-    if (path.startsWith("/api/followups/") && request.method === "DELETE") {
-      const id = path.split("/").pop();
-      await db.prepare("DELETE FROM followups WHERE id = ?").bind(id).run();
-      return jsonResponse({ message: "已删除" });
-    }
-
-    // Route: /api/quotes
-    if (path === "/api/quotes") {
-      if (request.method === "GET") {
-        const { results } = await db.prepare("SELECT * FROM quotes ORDER BY id DESC").all();
-        return jsonResponse(results || []);
-      }
-      if (request.method === "POST") {
-        const b = await request.json();
-        await db.prepare(`
-          INSERT INTO quotes (company, date, sku, price, qty, express_no, status, feedback, sales_rep, created_by)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).bind(
-          b.company || "", b.date || "", b.sku || "", b.price || 0, b.qty || 0,
-          b.express_no || "", b.status || "已发送报价", b.feedback || "",
-          b.sales_rep || currentUser.name, currentUser.id
-        ).run();
-        return jsonResponse({ message: "报价记录已保存" });
-      }
-    }
-
-    if (path.startsWith("/api/quotes/") && request.method === "DELETE") {
-      const id = path.split("/").pop();
-      await db.prepare("DELETE FROM quotes WHERE id = ?").bind(id).run();
-      return jsonResponse({ message: "已删除" });
-    }
-
-    // Route: /api/products
-    if (path === "/api/products") {
-      if (request.method === "GET") {
-        const { results } = await db.prepare("SELECT * FROM products ORDER BY id DESC").all();
-        return jsonResponse(results || []);
-      }
-      if (request.method === "POST") {
-        const b = await request.json();
-        if (b.id) {
-          // Update
-          await db.prepare(`
-            UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=?, image_url=?
-            WHERE id=?
-          `).bind(
-            b.sku || "", b.name || "", b.category || "", b.upper_material || "",
-            b.sole_material || "", b.price || 0, b.moq || 1000, b.target_market || "", b.tags || "", b.image_url || "", b.id
-          ).run();
-          return jsonResponse({ message: "鞋款修改成功" });
-        } else {
-          // Insert
-          await db.prepare(`
-            INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).bind(
-            b.sku || "", b.name || "", b.category || "", b.upper_material || "",
-            b.sole_material || "", b.price || 0, b.moq || 1000, b.target_market || "", b.tags || "", b.image_url || ""
-          ).run();
-          return jsonResponse({ message: "鞋款保存成功" });
+        // 2. Auth Login Route
+        if (path === '/api/auth/login' && method === 'POST') {
+            const body = await request.json();
+            const { username, password } = body;
+            if ((username === 'admin' || username === 'sales1') && (password === 'admin123' || password === '123456')) {
+                return new Response(JSON.stringify({
+                    token: 'mock-jwt-token-' + Date.now(),
+                    user: { username, name: username === 'admin' ? '张经理 (主管)' : '李业务 (销售)', role: username === 'admin' ? 'admin' : 'sales' }
+                }), { headers });
+            }
+            return new Response(JSON.stringify({ detail: '账号或密码错误 (默认账号: admin / 密码: admin123)' }), { status: 400, headers });
         }
-      }
+
+        // Authentication Check for all other protected APIs
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return new Response(JSON.stringify({ detail: '未提供有效的登录凭证，请先登录' }), { status: 401, headers });
+        }
+
+        // 3. Customers Endpoint
+        if (path === '/api/customers') {
+            if (method === 'GET') {
+                const { results } = await env.DB.prepare('SELECT * FROM customers ORDER BY id DESC').all();
+                return new Response(JSON.stringify(results || []), { headers });
+            }
+            if (method === 'POST') {
+                const b = await request.json();
+                const res = await env.DB.prepare(
+                    `INSERT INTO customers (company, country, contact, contact_info, level, channel, date, stage, preferred_styles, preferences, target_price, target_market, moq, sales_rep, notes) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                ).bind(
+                    b.company || '', b.country || '', b.contact || '', b.contact_info || '',
+                    b.level || 'VIP', b.channel || '展会', b.date || new Date().toISOString().split('T')[0],
+                    b.stage || '初次接触', b.preferred_styles || '', b.preferences || '',
+                    b.target_price || '', b.target_market || '', b.moq || '', b.sales_rep || '销售员', b.notes || ''
+                ).run();
+                return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
+            }
+        }
+
+        if (path.startsWith('/api/customers/')) {
+            const id = path.split('/')[3];
+            if (method === 'DELETE') {
+                await env.DB.prepare('DELETE FROM customers WHERE id = ?').bind(id).run();
+                return new Response(JSON.stringify({ success: true }), { headers });
+            }
+        }
+
+        // 4. Followups Endpoint
+        if (path === '/api/followups') {
+            if (method === 'GET') {
+                const { results } = await env.DB.prepare('SELECT * FROM followups ORDER BY id DESC').all();
+                return new Response(JSON.stringify(results || []), { headers });
+            }
+            if (method === 'POST') {
+                const b = await request.json();
+                const res = await env.DB.prepare(
+                    `INSERT INTO followups (company, date, channel, notes, interest, next_date, action, status, sales_rep) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                ).bind(
+                    b.company || '', b.date || new Date().toISOString().split('T')[0],
+                    b.channel || 'WhatsApp', b.notes || '', b.interest || '中',
+                    b.next_date || '', b.action || '', b.status || '进行中', b.sales_rep || '销售员'
+                ).run();
+                return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
+            }
+        }
+
+        if (path.startsWith('/api/followups/')) {
+            const id = path.split('/')[3];
+            if (method === 'DELETE') {
+                await env.DB.prepare('DELETE FROM followups WHERE id = ?').bind(id).run();
+                return new Response(JSON.stringify({ success: true }), { headers });
+            }
+        }
+
+        // 5. Quotes Endpoint
+        if (path === '/api/quotes') {
+            if (method === 'GET') {
+                const { results } = await env.DB.prepare('SELECT * FROM quotes ORDER BY id DESC').all();
+                return new Response(JSON.stringify(results || []), { headers });
+            }
+            if (method === 'POST') {
+                const b = await request.json();
+                const res = await env.DB.prepare(
+                    `INSERT INTO quotes (company, date, sku, price, qty, express_no, status, feedback, sales_rep) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                ).bind(
+                    b.company || '', b.date || new Date().toISOString().split('T')[0],
+                    b.sku || '', Number(b.price) || 0, Number(b.qty) || 1000,
+                    b.express_no || '', b.status || '已发送报价', b.feedback || '', b.sales_rep || '销售员'
+                ).run();
+                return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
+            }
+        }
+
+        if (path.startsWith('/api/quotes/')) {
+            const id = path.split('/')[3];
+            if (method === 'DELETE') {
+                await env.DB.prepare('DELETE FROM quotes WHERE id = ?').bind(id).run();
+                return new Response(JSON.stringify({ success: true }), { headers });
+            }
+        }
+
+        // 6. Products Endpoint
+        if (path === '/api/products') {
+            if (method === 'GET') {
+                const { results } = await env.DB.prepare('SELECT * FROM products ORDER BY id DESC').all();
+                return new Response(JSON.stringify(results || []), { headers });
+            }
+            if (method === 'POST') {
+                const b = await request.json();
+                if (b.id) {
+                    await env.DB.prepare(
+                        `UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=?, image_url=? WHERE id=?`
+                    ).bind(
+                        b.sku || '', b.name || '', b.category || '跑鞋',
+                        b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
+                        Number(b.moq) || 1000, b.target_market || '', b.tags || '',
+                        b.image_url || '', b.id
+                    ).run();
+                    return new Response(JSON.stringify({ success: true, id: b.id }), { headers });
+                } else {
+                    const res = await env.DB.prepare(
+                        `INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                    ).bind(
+                        b.sku || '', b.name || '', b.category || '跑鞋',
+                        b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
+                        Number(b.moq) || 1000, b.target_market || '', b.tags || '',
+                        b.image_url || ''
+                    ).run();
+                    return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
+                }
+            }
+        }
+
+        if (path.startsWith('/api/products/')) {
+            const id = path.split('/')[3];
+            if (method === 'DELETE') {
+                await env.DB.prepare('DELETE FROM products WHERE id = ?').bind(id).run();
+                return new Response(JSON.stringify({ success: true }), { headers });
+            }
+        }
+
+        return new Response(JSON.stringify({ error: 'Endpoint Not Found' }), { status: 404, headers });
+
+    } catch (err) {
+        return new Response(JSON.stringify({ error: err.message, stack: err.stack }), { status: 500, headers });
     }
-
-    if (path.startsWith("/api/products/") && request.method === "DELETE") {
-      const id = path.split("/").pop();
-      await db.prepare("DELETE FROM products WHERE id = ?").bind(id).run();
-      return jsonResponse({ message: "已删除" });
-    }
-
-    return jsonResponse({ error: "Not Found" }, 404);
-
-  } catch (err) {
-    return jsonResponse({ error: err.message || String(err) }, 500);
-  }
 }
