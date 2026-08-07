@@ -17,6 +17,94 @@ export async function onRequest(context) {
     }
 
     try {
+        // 0. 1688 / 搜鞋网 (sooxie.com) 商品一键抓取接口
+        if (path === '/api/scrape-product') {
+            let targetUrl = '';
+            if (method === 'POST') {
+                const body = await request.json();
+                targetUrl = body.url || '';
+            } else if (method === 'GET') {
+                targetUrl = url.searchParams.get('url') || '';
+            }
+
+            if (!targetUrl) {
+                return new Response(JSON.stringify({ error: '请提供有效的 1688 或 搜鞋网 (sooxie.com) 商品网址' }), { status: 400, headers });
+            }
+
+            try {
+                const fetchRes = await fetch(targetUrl, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                        'Accept-Language': 'zh-CN,zh;q=0.9'
+                    }
+                });
+
+                const html = await fetchRes.text();
+
+                let name = '';
+                let image_url = '';
+                let price = 0;
+                let sku = '';
+
+                // Extract SKU / Item ID
+                if (targetUrl.includes('1688.com')) {
+                    const match = targetUrl.match(/offer\/(\d+)\.html/);
+                    sku = match ? '1688-' + match[1] : '1688-' + Math.floor(100000 + Math.random() * 900000);
+                } else if (targetUrl.includes('sooxie.com')) {
+                    const match = targetUrl.match(/(\d+)\.html/) || targetUrl.match(/id=(\d+)/);
+                    sku = match ? 'SOOXIE-' + match[1] : 'SOOXIE-' + Math.floor(100000 + Math.random() * 900000);
+                } else {
+                    sku = 'SKU-' + Math.floor(100000 + Math.random() * 900000);
+                }
+
+                // Extract Title
+                const titleMatch = html.match(/<title>(.*?)<\/title>/i) || html.match(/meta property="og:title" content="(.*?)"/i);
+                if (titleMatch) {
+                    name = titleMatch[1].replace(/-1688\.com|-阿里巴巴|-搜鞋网|sooxie\.com/gi, '').trim();
+                }
+
+                // Extract Image
+                const imgMatch = html.match(/meta property="og:image" content="(.*?)"/i) || 
+                                 html.match(/<img[^>]+src="(https?:\/\/[^"]+(?:cbu01\.alicdn\.com|sooxie|img)[^"]+\.(?:jpg|png|webp))"/i) ||
+                                 html.match(/(https?:\/\/[^"]+\.(?:jpg|png|webp))/i);
+                if (imgMatch) {
+                    image_url = imgMatch[1];
+                }
+
+                // Extract Price
+                const priceMatch = html.match(/"price":"?([\d\.]+)"?/i) || 
+                                   html.match(/meta property="og:product:price" content="(.*?)"/i) ||
+                                   html.match(/￥\s*([\d\.]+)/) ||
+                                   html.match(/¥\s*([\d\.]+)/);
+                if (priceMatch) {
+                    price = parseFloat(priceMatch[1]) || 0;
+                }
+
+                return new Response(JSON.stringify({
+                    success: true,
+                    product: {
+                        sku: sku,
+                        name: name || ('网络抓取鞋款 ' + sku),
+                        price: price || 15.0,
+                        image_url: image_url || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
+                        category: name.includes('拖鞋') ? '凉拖鞋' : (name.includes('帆布') ? '休闲鞋' : '跑鞋'),
+                        upper_material: name.includes('飞织') ? '透气飞织' : (name.includes('皮') ? '真皮/PU' : '网布'),
+                        sole_material: 'MD+橡胶底',
+                        moq: 1000,
+                        target_market: '通用外贸',
+                        tags: '一键抓取, 热销推荐'
+                    }
+                }), { headers });
+
+            } catch (e) {
+                return new Response(JSON.stringify({
+                    error: '解析网页超时: ' + e.message,
+                    fallback: true
+                }), { status: 200, headers });
+            }
+        }
+
         // 1. 公开选款商品接口 (免 Auth Token)
         if (path === '/api/public/products' && method === 'GET') {
             const { results } = await env.DB.prepare(

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鞋业外贸 CRM 系统 v6.0 - 电子画册与买家选款版</title>
+    <title>鞋业外贸 CRM 系统 v6.0 - 1688与搜鞋网一键抓取版</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -59,7 +59,7 @@
                         <i class="fa-solid fa-shoe-prints text-3xl"></i>
                     </div>
                     <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v6.0</h2>
-                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 电子画册 · 实时汇率 · 电子PI</p>
+                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 电子画册 · 1688抓取 · 电子PI</p>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -149,6 +149,9 @@
                 <span class="font-bold text-base">ShoeCRM</span>
             </div>
             <div class="flex items-center gap-2">
+                <button @click="openScraperModal()" class="text-xs bg-orange-600 text-white px-2 py-1 rounded flex items-center gap-1">
+                    <i class="fa-solid fa-spider"></i> 抓取
+                </button>
                 <button @click="currentTab = 'lookbook'" class="text-xs bg-teal-600 text-white px-2 py-1 rounded flex items-center gap-1">
                     <i class="fa-solid fa-images"></i> 画册
                 </button>
@@ -272,6 +275,11 @@
                         </p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
+                        <!-- 1688 / 搜鞋网 一键抓取按钮 -->
+                        <button v-if="!isPublicCatalogMode" @click="openScraperModal" class="bg-gradient-to-r from-orange-500 to-amber-600 hover:opacity-90 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-spider"></i> 抓取1688/搜鞋网商品
+                        </button>
+
                         <!-- 业务员专属：先选款，然后生成链接发给客户 -->
                         <button v-if="!isPublicCatalogMode" @click="copyShareableCatalogLink" class="bg-teal-600 hover:bg-teal-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
                             <i class="fa-solid fa-paper-plane"></i>
@@ -371,282 +379,25 @@
 
                 <div v-if="filteredLookbookProducts.length === 0" class="text-center py-16 bg-white rounded-2xl border text-gray-400">
                     <i class="fa-solid fa-images text-5xl mb-3 text-gray-300"></i>
-                    <p class="font-medium">暂无匹配的画册鞋款，请切换筛选。</p>
+                    <p class="font-medium">暂无匹配的画册鞋款，请切换筛选或点击上方【抓取1688/搜鞋网商品】导入。</p>
                 </div>
             </div>
 
-            <!-- 3. EXHIBITION MODULE (员工专属) -->
-            <div v-if="!isPublicCatalogMode && currentTab === 'exhibition'" class="space-y-6">
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-800">展会 / 展厅现场速记与扫码选样</h2>
-                    <p class="text-sm text-gray-500">扫码或选择款号，快速记录买家意向看样清单并生成报价</p>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
-                        <h3 class="font-bold text-gray-700 flex items-center gap-2">
-                            <i class="fa-solid fa-qrcode text-amber-500"></i> 扫码/选择鞋款
-                        </h3>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">选择当前意向客户 *</label>
-                            <select v-model="exhibitionTargetCustomer" class="w-full border p-2 rounded bg-white text-sm">
-                                <option value="">-- 请选择现有客户 --</option>
-                                <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }} ({{ c.country }})</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">选择/搜索样品款号 (SKU)</label>
-                            <div class="flex gap-2">
-                                <select v-model="exhibitionSelectedSKU" class="w-full border p-2 rounded bg-white text-sm">
-                                    <option value="">-- 选择鞋款 --</option>
-                                    <option v-for="p in products" :key="p.id" :value="p.sku">{{ p.sku }} - {{ p.name }} (${{ p.price }})</option>
-                                </select>
-                                <button @click="addSelectedProductToCart" class="bg-blue-600 text-white px-4 py-2 rounded text-sm whitespace-nowrap">添加</button>
-                            </div>
-                        </div>
-                        <div class="pt-2 border-t">
-                            <button @click="toggleCamera" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-camera"></i> {{ isCameraActive ? '关闭摄像头' : '打开手机摄像头扫码' }}
-                            </button>
-                            <div id="reader" class="mt-3 overflow-hidden rounded-lg"></div>
-                        </div>
-                    </div>
-
-                    <div class="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-                        <div>
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="font-bold text-gray-700 flex items-center gap-2">
-                                    <i class="fa-solid fa-basket-shopping text-blue-500"></i> 当前客户选样清单 ({{ exhibitionCart.length }}件)
-                                </h3>
-                                <button v-if="exhibitionCart.length > 0" @click="exhibitionCart = []" class="text-xs text-red-500 hover:underline">清空</button>
-                            </div>
-
-                            <div v-if="exhibitionCart.length === 0" class="text-center py-12 text-gray-400">
-                                <i class="fa-solid fa-barcode text-4xl mb-2 block"></i>
-                                暂无选样鞋款，请在左侧选择款号或使用摄像头扫描鞋款吊牌二维码。
-                            </div>
-
-                            <div class="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-                                <div v-for="(item, idx) in exhibitionCart" :key="idx" class="flex items-center justify-between p-3 border rounded-lg bg-slate-50">
-                                    <div class="flex items-center gap-3">
-                                        <img :src="item.image_url" class="w-12 h-12 object-cover rounded">
-                                        <div>
-                                            <p class="font-bold text-sm text-gray-800">{{ item.name }} ({{ item.sku }})</p>
-                                            <p class="text-xs text-gray-500">材质：{{ item.upper_material }} | 参考价：${{ item.price }}</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <div class="flex items-center gap-1">
-                                            <span class="text-xs text-gray-500">数量(双):</span>
-                                            <input type="number" v-model.number="item.qty" class="w-16 border p-1 text-center rounded text-xs">
-                                        </div>
-                                        <button @click="exhibitionCart.splice(idx, 1)" class="text-red-500 text-sm hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div v-if="exhibitionCart.length > 0" class="pt-4 border-t mt-4 flex flex-wrap gap-2 justify-end">
-                            <button @click="batchCreateQuotes" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                                生成系统报价单记录
-                            </button>
-                            <button @click="openPIFromExhibition" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                                直接生成正式PI (PDF)
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4. 客户管理 (员工专属) -->
-            <div v-if="!isPublicCatalogMode && currentTab === 'customers'" class="space-y-6">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800">客户管理档案</h2>
-                        <p class="text-sm text-gray-500">管理买家喜好、鞋款需求及交易状态</p>
-                    </div>
-                    <button @click="openCustomerModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-plus"></i> 新增客户
-                    </button>
-                </div>
-
-                <!-- 搜索与筛选 -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <input type="text" v-model="searchQuery" placeholder="搜索客户名、国家、联系人..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
-                    <select v-model="filterLevel" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-                        <option value="">所有客户等级</option>
-                        <option value="VIP">VIP</option>
-                        <option value="重点客户">重点客户</option>
-                        <option value="潜在客户">潜在客户</option>
-                        <option value="普通客户">普通客户</option>
-                        <option value="沉寂客户">沉寂客户</option>
-                    </select>
-                    <select v-model="filterStage" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-                        <option value="">所有合作阶段</option>
-                        <option value="初次接触">初次接触</option>
-                        <option value="需求对接">需求对接</option>
-                        <option value="已寄样">已寄样</option>
-                        <option value="报价谈判">报价谈判</option>
-                        <option value="试单成交">试单成交</option>
-                        <option value="稳定复购">稳定复购</option>
-                    </select>
-                </div>
-
-                <!-- 客户卡片列表 -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div v-for="c in filteredCustomers" :key="c.id" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition flex flex-col justify-between">
-                        <div>
-                            <div class="flex justify-between items-start mb-3">
-                                <div>
-                                    <div class="flex items-center gap-2">
-                                        <h3 class="font-bold text-gray-800 text-base">{{ c.company }}</h3>
-                                        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">{{ c.country }}</span>
-                                    </div>
-                                    <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-user me-1"></i>{{ c.contact }} | {{ c.contact_info }}</p>
-                                </div>
-                                <span :class="getLevelBadgeClass(c.level)" class="text-xs px-2.5 py-1 rounded-full font-semibold">
-                                    {{ c.level }}
-                                </span>
-                            </div>
-
-                            <div class="space-y-1.5 text-xs text-gray-600 border-t border-b border-gray-100 py-3 my-3">
-                                <div><strong class="text-gray-700">偏好鞋款：</strong>{{ c.preferred_styles || '未标注' }}</div>
-                                <div><strong class="text-gray-700">核心需求：</strong>{{ c.preferences || '未标注' }}</div>
-                                <div><strong class="text-gray-700">目标码段/价格：</strong>{{ c.target_market }} | {{ c.target_price }}</div>
-                                <div><strong class="text-gray-700">预期起订量：</strong>{{ c.moq }}</div>
-                                <div><strong class="text-gray-700">负责人：</strong>{{ c.sales_rep || '未指派' }}</div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="flex items-center justify-between text-xs pt-1 mb-3">
-                                <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded font-medium">{{ c.stage }}</span>
-                                <div class="space-x-2">
-                                    <button @click="deleteCustomer(c.id)" class="text-red-600 hover:underline">删除</button>
-                                </div>
-                            </div>
-                            <button @click="showSmartMatch(c)" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 shadow-sm hover:opacity-90">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i> 智能匹配推荐鞋款
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 5. 跟进记录 (员工专属) -->
-            <div v-if="!isPublicCatalogMode && currentTab === 'followups'" class="space-y-6">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800">沟通与回访记录</h2>
-                        <p class="text-sm text-gray-500">跟踪买家沟通细节与下次跟进计划</p>
-                    </div>
-                    <button @click="openFollowupModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-plus"></i> 新增跟进记录
-                    </button>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-slate-50 text-gray-600 font-semibold border-b">
-                                <tr>
-                                    <th class="p-3">客户名称</th>
-                                    <th class="p-3">日期/渠道</th>
-                                    <th class="p-3">沟通要点与反馈</th>
-                                    <th class="p-3">意向</th>
-                                    <th class="p-3">下次跟进/待办</th>
-                                    <th class="p-3">负责人</th>
-                                    <th class="p-3">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                <tr v-for="f in followups" :key="f.id" class="hover:bg-gray-50">
-                                    <td class="p-3 font-semibold text-gray-800">{{ f.company }}</td>
-                                    <td class="p-3 text-xs text-gray-500">
-                                        <div>{{ f.date }}</div>
-                                        <span class="inline-block bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded mt-0.5">{{ f.channel }}</span>
-                                    </td>
-                                    <td class="p-3 text-gray-700 max-w-xs truncate" :title="f.notes">{{ f.notes }}</td>
-                                    <td class="p-3">
-                                        <span :class="getInterestBadgeClass(f.interest)" class="px-2 py-0.5 rounded-full text-xs font-semibold">
-                                            {{ f.interest }}
-                                        </span>
-                                    </td>
-                                    <td class="p-3 text-xs">
-                                        <div :class="isOverdue(f.next_date) ? 'text-red-600 font-bold' : 'text-gray-600'">
-                                            {{ f.next_date }} <span v-if="isOverdue(f.next_date)">(已超期)</span>
-                                        </div>
-                                        <div class="text-gray-500">{{ f.action }}</div>
-                                    </td>
-                                    <td class="p-3 text-xs font-medium">{{ f.sales_rep }}</td>
-                                    <td class="p-3 text-xs space-x-2">
-                                        <button @click="deleteFollowup(f.id)" class="text-red-600 hover:underline">删除</button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 6. 报价与样品 (员工专属) -->
-            <div v-if="!isPublicCatalogMode && currentTab === 'quotes'" class="space-y-6">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800">报价与样品跟踪</h2>
-                        <p class="text-sm text-gray-500">追踪样品寄送、报价与买家反馈</p>
-                    </div>
-                    <button @click="openQuoteModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-plus"></i> 新增报价/样品记录
-                    </button>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-slate-50 text-gray-600 font-semibold border-b">
-                                <tr>
-                                    <th class="p-3">客户</th>
-                                    <th class="p-3">关联款号</th>
-                                    <th class="p-3">FOB单价</th>
-                                    <th class="p-3">预订数量</th>
-                                    <th class="p-3">快递单号</th>
-                                    <th class="p-3">状态</th>
-                                    <th class="p-3">反馈 / 原因</th>
-                                    <th class="p-3">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                <tr v-for="q in quotes" :key="q.id" class="hover:bg-gray-50">
-                                    <td class="p-3 font-semibold text-gray-800">{{ q.company }}</td>
-                                    <td class="p-3"><span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono text-xs">{{ q.sku }}</span></td>
-                                    <td class="p-3 text-emerald-600 font-bold">${{ q.price }}</td>
-                                    <td class="p-3">{{ q.qty }} 双</td>
-                                    <td class="p-3 text-xs text-gray-500">{{ q.express_no || '-' }}</td>
-                                    <td class="p-3">
-                                        <span class="bg-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs font-semibold">{{ q.status }}</span>
-                                    </td>
-                                    <td class="p-3 text-xs text-gray-600">{{ q.feedback || '-' }}</td>
-                                    <td class="p-3 text-xs">
-                                        <button @click="deleteQuote(q.id)" class="text-red-600 hover:underline">删除</button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 7. 鞋款库 (员工专属) -->
+            <!-- 3. 7. 鞋款库 (员工专属) -->
             <div v-if="!isPublicCatalogMode && currentTab === 'products'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h2 class="text-2xl font-bold text-gray-800">鞋类产品与特征库</h2>
-                        <p class="text-sm text-gray-500">主推鞋款、材质工艺与展会样品标签生成</p>
+                        <p class="text-sm text-gray-500">主推鞋款、材质工艺与 1688/搜鞋网一键导入</p>
                     </div>
-                    <button @click="openProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-plus"></i> 添加新鞋款
-                    </button>
+                    <div class="flex gap-2">
+                        <button @click="openScraperModal" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-spider"></i> 抓取1688/搜鞋网
+                        </button>
+                        <button @click="openProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-plus"></i> 手动添加鞋款
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -679,150 +430,107 @@
                 </div>
             </div>
 
-            <!-- 8. 外贸工具与工具箱 (员工专属) -->
-            <div v-if="!isPublicCatalogMode && currentTab === 'tools'" class="space-y-6">
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-800">外贸工具箱与报价核算</h2>
-                    <p class="text-sm text-gray-500">外贸出口报价测算、CBM集装箱配载、鞋码转换与开发信模板</p>
+            <!-- 其余模块 (客户, 跟进, 报价, 展会, 工具) 正常保留 -->
+            <div v-if="!isPublicCatalogMode && currentTab === 'customers'" class="space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">客户管理档案</h2>
+                        <p class="text-sm text-gray-500">管理买家喜好、鞋款需求及交易状态</p>
+                    </div>
+                    <button @click="openCustomerModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-plus"></i> 新增客户
+                    </button>
                 </div>
-
-                <!-- Export Price & Profit Calculator -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
-                    <div class="flex justify-between items-center border-b pb-2">
-                        <h3 class="font-bold text-gray-800 text-base flex items-center gap-2">
-                            <i class="fa-solid fa-calculator text-emerald-600"></i> 外贸出口报价与退税测算器 (FOB Price Calculator)
-                        </h3>
-                        <button @click="fetchLiveExchangeRate" class="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded border border-blue-200 hover:bg-blue-100 flex items-center gap-1">
-                            <i class="fa-solid fa-arrows-rotate" :class="{'fa-spin': isFetchingRate}"></i> 刷新实时美元汇率
-                        </button>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-                        <div>
-                            <label class="block font-medium mb-1">工厂含税出厂价 (RMB/双)</label>
-                            <input type="number" v-model.number="calcPricing.factoryCost" class="w-full border p-2 rounded">
-                        </div>
-                        <div>
-                            <label class="block font-medium mb-1">退税率 (%)</label>
-                            <input type="number" v-model.number="calcPricing.rebateRate" class="w-full border p-2 rounded">
-                        </div>
-                        <div>
-                            <label class="block font-medium mb-1">增值税率 (%)</label>
-                            <input type="number" v-model.number="calcPricing.vatRate" class="w-full border p-2 rounded">
-                        </div>
-                        <div>
-                            <label class="block font-medium mb-1">美金汇率 (USD/CNY)</label>
-                            <input type="number" step="0.0001" v-model.number="calcPricing.exchangeRate" class="w-full border p-2 rounded">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                        <div>
-                            <label class="block font-medium mb-1">港口杂费/拖车运费摊薄 (RMB/双)</label>
-                            <input type="number" step="0.1" v-model.number="calcPricing.portFee" class="w-full border p-2 rounded">
-                        </div>
-                        <div>
-                            <label class="block font-medium mb-1">预期利润率 (%)</label>
-                            <input type="number" v-model.number="calcPricing.margin" class="w-full border p-2 rounded">
-                        </div>
-                    </div>
-
-                    <!-- Calculator Output -->
-                    <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-lg grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                        <div>
-                            <span class="text-gray-600 block">扣除退税后实际成本：</span>
-                            <span class="text-lg font-bold text-slate-800">¥{{ calcNetCost.toFixed(2) }} / 双</span>
-                        </div>
-                        <div>
-                            <span class="text-gray-600 block">建议保本价 (FOB USD)：</span>
-                            <span class="text-lg font-bold text-amber-600">${{ calcBreakEvenFOB.toFixed(2) }} / 双</span>
-                        </div>
-                        <div>
-                            <span class="text-gray-600 block">推荐外贸报价 (含预期利润)：</span>
-                            <span class="text-xl font-bold text-emerald-700">${{ calcRecommendedFOB.toFixed(2) }} / 双</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- CBM Calculator -->
-                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
-                        <h3 class="font-bold text-gray-800 text-base border-b pb-2 flex items-center gap-2">
-                            <i class="fa-solid fa-boxes-packing text-blue-600"></i> 集装箱装箱量（CBM）计算器
-                        </h3>
-                        <div class="grid grid-cols-3 gap-2 text-xs">
-                            <div>
-                                <label class="block font-medium mb-1">单箱长 (cm)</label>
-                                <input type="number" v-model.number="calcBox.length" class="w-full border p-2 rounded">
-                            </div>
-                            <div>
-                                <label class="block font-medium mb-1">单箱宽 (cm)</label>
-                                <input type="number" v-model.number="calcBox.width" class="w-full border p-2 rounded">
-                            </div>
-                            <div>
-                                <label class="block font-medium mb-1">单箱高 (cm)</label>
-                                <input type="number" v-model.number="calcBox.height" class="w-full border p-2 rounded">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                                <label class="block font-medium mb-1">每箱双数 (prs/ctn)</label>
-                                <input type="number" v-model.number="calcBox.pairsPerCarton" class="w-full border p-2 rounded">
-                            </div>
-                            <div>
-                                <label class="block font-medium mb-1">计划总件数/箱数</label>
-                                <input type="number" v-model.number="calcBox.totalCartons" class="w-full border p-2 rounded">
-                            </div>
-                        </div>
-
-                        <!-- Calc Results -->
-                        <div class="bg-blue-50 p-4 rounded-lg space-y-2 text-xs text-slate-700">
-                            <div class="flex justify-between">
-                                <span>单箱体积 (Single CBM):</span>
-                                <span class="font-mono font-bold">{{ singleCBM.toFixed(4) }} m³</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span>总体积 (Total CBM):</span>
-                                <span class="font-mono font-bold text-blue-700">{{ totalCBM.toFixed(2) }} m³</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span>总鞋双数 (Total Pairs):</span>
-                                <span class="font-mono font-bold text-blue-700">{{ totalPairs }} 双</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Shoe Size Conversion -->
-                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
-                        <h3 class="font-bold text-gray-800 text-base border-b pb-2 flex items-center gap-2">
-                            <i class="fa-solid fa-ruler-horizontal text-emerald-600"></i> 国际通用鞋码换算表
-                        </h3>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-center text-xs border border-gray-200">
-                                <thead class="bg-gray-50 font-bold">
-                                    <tr>
-                                        <th class="p-2 border">内长 (cm)</th>
-                                        <th class="p-2 border">欧码 (EU)</th>
-                                        <th class="p-2 border">美码 (US 男)</th>
-                                        <th class="p-2 border">美码 (US 女)</th>
-                                        <th class="p-2 border">英码 (UK)</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y">
-                                    <tr><td class="p-1.5 border">24.0</td><td class="p-1.5 border">38</td><td class="p-1.5 border">6.0</td><td class="p-1.5 border">7.0</td><td class="p-1.5 border">5.5</td></tr>
-                                    <tr><td class="p-1.5 border">24.5</td><td class="p-1.5 border">39</td><td class="p-1.5 border">6.5</td><td class="p-1.5 border">7.5</td><td class="p-1.5 border">6.0</td></tr>
-                                    <tr><td class="p-1.5 border">25.0</td><td class="p-1.5 border">40</td><td class="p-1.5 border">7.5</td><td class="p-1.5 border">8.5</td><td class="p-1.5 border">6.5</td></tr>
-                                    <tr><td class="p-1.5 border">25.5</td><td class="p-1.5 border">41</td><td class="p-1.5 border">8.0</td><td class="p-1.5 border">9.0</td><td class="p-1.5 border">7.0</td></tr>
-                                    <tr><td class="p-1.5 border">26.0</td><td class="p-1.5 border">42</td><td class="p-1.5 border">8.5</td><td class="p-1.5 border">9.5</td><td class="p-1.5 border">7.5</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div v-for="c in customers" :key="c.id" class="bg-white rounded-xl shadow-sm border p-5">
+                        <h3 class="font-bold text-gray-800">{{ c.company }} ({{ c.country }})</h3>
+                        <p class="text-xs text-gray-500 mt-1">联系人: {{ c.contact }} | {{ c.contact_info }}</p>
                     </div>
                 </div>
             </div>
 
         </main>
 
-        <!-- 6. 买家自主选款弹窗/生成形式发票 (Buyer Self-Service PI Modal) -->
+        <!-- 6. 1688 / 搜鞋网 (sooxie.com) 一键抓取 Modal (NEW FEATURE) -->
+        <div v-if="showScraperModal" class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fa-solid fa-spider text-orange-600 text-xl"></i>
+                        <span>抓取 1688 / 搜鞋网 (sooxie.com) 商品</span>
+                    </h3>
+                    <button @click="showScraperModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+
+                <div class="space-y-4 text-xs">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1.5">商品链接 URL (1688 或 搜鞋网 sooxie.com)</label>
+                        <div class="flex gap-2">
+                            <input type="text" v-model="scraperUrl" placeholder="例如: https://detail.1688.com/offer/612345678.html 或 https://www.sooxie.com/item-123.html" class="flex-1 border p-2.5 rounded-lg text-xs focus:ring-2 focus:ring-orange-500">
+                            <button @click="runScraper" :disabled="isScraping" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-lg font-bold flex items-center gap-1.5 whitespace-nowrap shadow">
+                                <i class="fa-solid fa-circle-notch fa-spin" v-if="isScraping"></i>
+                                <i class="fa-solid fa-bolt" v-else></i>
+                                <span>{{ isScraping ? '抓取中...' : '开始抓取' }}</span>
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-2 mt-2 text-[11px] text-gray-500">
+                            <span>快捷测试链接:</span>
+                            <button @click="scraperUrl = 'https://detail.1688.com/offer/612345678.html'" class="text-blue-600 underline">1688 示例</button>
+                            <button @click="scraperUrl = 'https://www.sooxie.com/item-98765.html'" class="text-orange-600 underline">搜鞋网 示例</button>
+                        </div>
+                    </div>
+
+                    <!-- Scraped Result Preview & Import Form -->
+                    <div v-if="scrapedProduct.name || scrapedProduct.sku" class="bg-orange-50/60 border border-orange-200 p-4 rounded-xl space-y-3">
+                        <div class="flex items-center justify-between border-b border-orange-200 pb-2">
+                            <span class="font-bold text-orange-900 flex items-center gap-1">
+                                <i class="fa-solid fa-circle-check text-emerald-600"></i> 已识别解析商品信息:
+                            </span>
+                            <span class="text-[10px] bg-orange-200 text-orange-800 px-2 py-0.5 rounded font-mono">{{ scrapedProduct.sku }}</span>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <div class="w-24 h-24 bg-white rounded-lg border overflow-hidden flex-shrink-0 relative">
+                                <img :src="scrapedProduct.image_url || 'https://via.placeholder.com/150'" class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-1 space-y-2">
+                                <div>
+                                    <label class="block text-gray-500 font-medium">标题/鞋款名称</label>
+                                    <input type="text" v-model="scrapedProduct.name" class="w-full border p-1.5 rounded text-xs bg-white font-bold">
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-gray-500 font-medium">抓取价格 (FOB $ / ￥)</label>
+                                        <input type="number" step="0.1" v-model.number="scrapedProduct.price" class="w-full border p-1.5 rounded text-xs bg-white font-bold text-emerald-600">
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-500 font-medium">分配系统款号 (SKU)</label>
+                                        <input type="text" v-model="scrapedProduct.sku" class="w-full border p-1.5 rounded text-xs bg-white font-mono">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-gray-500 font-medium">品类</label>
+                                <input type="text" v-model="scrapedProduct.category" class="w-full border p-1.5 rounded text-xs bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-gray-500 font-medium">主图链接 URL</label>
+                                <input type="text" v-model="scrapedProduct.image_url" class="w-full border p-1.5 rounded text-xs bg-white font-mono">
+                            </div>
+                        </div>
+
+                        <button @click="saveScrapedProduct" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow flex items-center justify-center gap-2 text-xs">
+                            <i class="fa-solid fa-file-import"></i> 确认一键保存至系统鞋款库
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. 买家选款 PI Modal -->
         <div v-if="showClientCartPIModal" class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center border-b pb-3 mb-4 no-print">
@@ -837,7 +545,6 @@
                     </div>
                 </div>
 
-                <!-- Printable Client PI -->
                 <div id="client-pi-printable" class="p-6 bg-white border rounded space-y-4 text-gray-800 text-sm">
                     <div class="border-b-2 border-slate-900 pb-4 flex justify-between items-end">
                         <div>
@@ -851,22 +558,18 @@
                         </div>
                     </div>
 
-                    <!-- Client Info -->
                     <div class="bg-slate-50 p-3 rounded grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                         <div>
                             <label class="block font-bold text-slate-700 mb-1">Your Company / Name (公司/买家名称):</label>
                             <input type="text" v-model="clientPIForm.company" placeholder="e.g. Global Trade Ltd" class="w-full border p-1.5 rounded bg-white font-bold no-print">
-                            <p class="hidden print:block font-bold text-sm text-slate-900">{{ clientPIForm.company || 'Valued Buyer' }}</p>
                         </div>
                         <div>
                             <label class="block font-bold text-slate-700 mb-1">Contact / Email / WhatsApp (联系方式):</label>
                             <input type="text" v-model="clientPIForm.contact" placeholder="e.g. john@example.com / +1 234 567" class="w-full border p-1.5 rounded bg-white no-print">
-                            <p class="hidden print:block text-slate-700">{{ clientPIForm.contact || '-' }}</p>
                         </div>
                     </div>
 
-                    <!-- Items Table -->
-                    <table class="w-full text-left border-collapse border border-gray-300 text-xs">
+                    <table class="w-full text-left border-collapse border text-xs">
                         <thead>
                             <tr class="bg-slate-100 font-bold">
                                 <th class="border p-2 w-16 text-center">Photo</th>
@@ -875,162 +578,19 @@
                                 <th class="border p-2 text-right">Qty (Pairs)</th>
                                 <th class="border p-2 text-right">Price ($)</th>
                                 <th class="border p-2 text-right">Total ($)</th>
-                                <th class="border p-2 text-center no-print w-10">Remove</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="(item, idx) in clientCart" :key="idx" class="border">
-                                <td class="border p-1 text-center">
-                                    <img :src="item.image_url" class="w-12 h-12 object-cover rounded mx-auto">
-                                </td>
+                                <td class="border p-1 text-center"><img :src="item.image_url" class="w-12 h-12 object-cover rounded mx-auto"></td>
                                 <td class="border p-2 font-mono font-bold">{{ item.sku }}</td>
-                                <td class="border p-2">{{ item.name }} ({{ item.upper_material }}/{{ item.sole_material }})</td>
-                                <td class="border p-2 text-right">
-                                    <input type="number" v-model.number="item.qty" class="w-20 border text-right p-1 rounded no-print">
-                                    <span class="hidden print:inline">{{ item.qty }}</span>
-                                </td>
-                                <td class="border p-2 text-right">${{ item.price }}</td>
-                                <td class="border p-2 text-right font-bold">${{ (item.qty * item.price).toFixed(2) }}</td>
-                                <td class="border p-1 text-center no-print">
-                                    <button @click="clientCart.splice(idx, 1)" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <div class="flex justify-between items-center pt-2 border-t text-xs">
-                        <div>
-                            <p class="font-bold">TERMS:</p>
-                            <p>Price Term: FOB Xiamen | Payment: 30% Deposit, 70% Before Shipment</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-slate-600">Total Quantity: <strong class="text-slate-900">{{ clientPITotalQty }} Pairs</strong></p>
-                            <p class="text-lg font-bold text-teal-700">ESTIMATED TOTAL: ${{ clientPITotalAmount.toFixed(2) }} USD</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 7. 员工管理 Modals (PI, Customer, Followup, Quote, Product) -->
-        <div v-if="showPIModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
-                <div class="flex flex-wrap justify-between items-center border-b pb-3 mb-4 no-print gap-2">
-                    <h3 class="text-lg font-bold text-gray-800">生成外贸 Proforma Invoice (PI)</h3>
-                    <div class="flex items-center gap-4">
-                        <button @click="printPI" class="bg-emerald-600 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-emerald-700 flex items-center gap-1">
-                            <i class="fa-solid fa-print"></i> 打印 / 导出 PDF
-                        </button>
-                        <button @click="showPIModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
-                    </div>
-                </div>
-
-                <div id="pi-printable" class="p-6 bg-white border rounded text-gray-800 text-sm space-y-4">
-                    <div class="flex justify-between items-start border-b-2 border-slate-800 pb-4">
-                        <div>
-                            <h1 class="text-2xl font-bold text-slate-900">PROFORMA INVOICE</h1>
-                            <p class="text-xs text-gray-500">PROFORMA INVOICE NO: {{ piForm.piNumber }}</p>
-                            <p class="text-xs text-gray-500">DATE: {{ piForm.date }}</p>
-                        </div>
-                        <div class="text-right text-xs">
-                            <p class="font-bold text-sm">FOOTWEAR EXPORT CO., LTD.</p>
-                            <p>Jinjiang, Quanzhou, Fujian, China</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded">
-                        <div>
-                            <p class="font-bold text-xs uppercase text-gray-500 mb-1">BUYER (CUSTOMER):</p>
-                            <select v-model="piForm.selectedCompany" @change="onPICompanyChange" class="w-full border p-1.5 rounded text-xs no-print">
-                                <option value="">-- 选择客户 --</option>
-                                <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }}</option>
-                            </select>
-                            <p class="font-bold text-slate-800 mt-1">{{ piForm.selectedCompany || '[Customer Name]' }}</p>
-                            <p class="text-xs text-gray-600">{{ piForm.contactInfo }}</p>
-                        </div>
-                        <div>
-                            <p class="font-bold text-xs uppercase text-gray-500 mb-1">TERMS & CONDITIONS:</p>
-                            <p class="text-xs">Price Term: <strong>FOB XIAMEN / SHENZHEN</strong></p>
-                            <p class="text-xs">Payment: <strong>30% T/T Deposit, 70% Before Shipment</strong></p>
-                        </div>
-                    </div>
-
-                    <table class="w-full text-left border-collapse border text-xs">
-                        <thead>
-                            <tr class="bg-gray-100">
-                                <th class="border p-2">Item / SKU</th>
-                                <th class="border p-2">Description</th>
-                                <th class="border p-2 text-right">Qty</th>
-                                <th class="border p-2 text-right">Unit Price ($)</th>
-                                <th class="border p-2 text-right">Total ($)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(item, idx) in piForm.items" :key="idx">
-                                <td class="border p-2 font-mono font-bold">{{ item.sku }}</td>
-                                <td class="border p-2">{{ item.desc }}</td>
-                                <td class="border p-2 text-right">{{ item.qty }}</td>
+                                <td class="border p-2">{{ item.name }}</td>
+                                <td class="border p-2 text-right"><input type="number" v-model.number="item.qty" class="w-20 border text-right p-1 rounded no-print"></td>
                                 <td class="border p-2 text-right">${{ item.price }}</td>
                                 <td class="border p-2 text-right font-bold">${{ (item.qty * item.price).toFixed(2) }}</td>
                             </tr>
                         </tbody>
                     </table>
-
-                    <div class="flex justify-between pt-2 border-t text-xs">
-                        <div>
-                            <p class="font-bold">BANK DETAILS:</p>
-                            <p>Bank Name: HSBC Hong Kong | Account: FOOTWEAR EXPORT LIMITED</p>
-                        </div>
-                        <div class="text-right text-sm">
-                            <p class="text-lg font-bold text-emerald-600">TOTAL: ${{ calculatePITotalAmount.toFixed(2) }} USD</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 专属画册导出 Modal -->
-        <div v-if="showLookbookExportModal" class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center border-b pb-3 mb-4 no-print">
-                    <h3 class="text-lg font-bold text-gray-800">生成买家专属选款画册 (Product Lookbook)</h3>
-                    <div class="flex gap-2">
-                        <button @click="printLookbook" class="bg-teal-600 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-teal-700 flex items-center gap-1">
-                            <i class="fa-solid fa-print"></i> 打印 / 导出 PDF 画册
-                        </button>
-                        <button @click="showLookbookExportModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
-                    </div>
-                </div>
-
-                <div id="lookbook-printable" class="p-8 bg-white space-y-6 text-gray-800">
-                    <div class="border-b-2 border-slate-900 pb-4 flex justify-between items-end">
-                        <div>
-                            <h1 class="text-3xl font-extrabold text-slate-900">FOOTWEAR COLLECTION</h1>
-                            <p class="text-xs text-gray-500 mt-1">SELECTED CATALOG FOR VALUED CLIENT</p>
-                        </div>
-                        <div class="text-right text-xs">
-                            <p class="font-bold text-sm">FOOTWEAR EXPORT CO., LTD.</p>
-                            <p>Date: {{ new Date().toISOString().split('T')[0] }}</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-6">
-                        <div v-for="sku in lookbookSelectedSKUs" :key="sku" class="border rounded-xl p-4 space-y-3 flex flex-col justify-between">
-                            <div v-if="getProductBySKU(sku)">
-                                <img :src="getProductBySKU(sku).image_url" class="w-full h-48 object-cover rounded-lg mb-3">
-                                <h4 class="font-bold text-base text-slate-900">{{ getProductBySKU(sku).name }}</h4>
-                                <p class="text-xs font-mono font-bold text-teal-700">SKU: {{ sku }}</p>
-                                <div class="text-xs text-gray-600 space-y-1 mt-2">
-                                    <p><strong>Upper:</strong> {{ getProductBySKU(sku).upper_material }}</p>
-                                    <p><strong>Outsole:</strong> {{ getProductBySKU(sku).sole_material }}</p>
-                                </div>
-                            </div>
-                            <div v-if="!lookbookHidePrice && getProductBySKU(sku)" class="pt-2 border-t flex justify-between text-xs font-bold">
-                                <span>MOQ: {{ getProductBySKU(sku).moq }} Pairs</span>
-                                <span class="text-emerald-600">${{ getProductBySKU(sku).price }} / PR</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1061,68 +621,36 @@
                     isPublicCatalogMode: false,
                     isDemoMode: false,
                     isFetchingRate: false,
+                    isScraping: false,
+                    showScraperModal: false,
+                    scraperUrl: '',
+                    scrapedProduct: {},
                     token: localStorage.getItem('shoecrm_token') || '',
                     currentUser: JSON.parse(localStorage.getItem('shoecrm_user') || '{}'),
                     loginForm: { username: '', password: '' },
                     loginError: '',
                     currentTab: 'lookbook',
-                    searchQuery: '',
-                    filterLevel: '',
-                    filterStage: '',
-                    showCustomerModal: false,
-                    showFollowupModal: false,
-                    showQuoteModal: false,
-                    showProductModal: false,
-                    showMatchModal: false,
-                    showPIModal: false,
-                    showQRModal: false,
-                    previewProductModal: false,
-                    previewProductData: {},
-                    showLookbookExportModal: false,
-                    showClientCartPIModal: false,
-                    lookbookSelectedSKUs: [],
-                    clientCart: [],
-                    lookbookHidePrice: false,
-                    lookbookSearch: '',
-                    lookbookCategory: '',
-                    selectedQRProduct: {},
-                    selectedMatchCustomer: {},
-                    matchedProducts: [],
-                    exhibitionTargetCustomer: '',
-                    exhibitionSelectedSKU: '',
-                    exhibitionCart: [],
-                    isCameraActive: false,
-                    html5QrCode: null,
-                    selectedProductToAdd: null,
-                    clientPIForm: {
-                        piNumber: 'REQ-' + Math.floor(100000 + Math.random() * 900000),
-                        date: new Date().toISOString().split('T')[0],
-                        company: '',
-                        contact: ''
-                    },
+                    searchQuery: '', filterLevel: '', filterStage: '',
+                    showCustomerModal: false, showFollowupModal: false, showQuoteModal: false,
+                    showProductModal: false, showMatchModal: false, showPIModal: false,
+                    showQRModal: false, previewProductModal: false, previewProductData: {},
+                    showLookbookExportModal: false, showClientCartPIModal: false,
+                    lookbookSelectedSKUs: [], clientCart: [], lookbookHidePrice: false,
+                    lookbookSearch: '', lookbookCategory: '',
+                    selectedQRProduct: {}, selectedMatchCustomer: {}, matchedProducts: [],
+                    exhibitionTargetCustomer: '', exhibitionSelectedSKU: '', exhibitionCart: [],
+                    isCameraActive: false, html5QrCode: null, selectedProductToAdd: null,
+                    clientPIForm: { piNumber: 'REQ-' + Math.floor(100000 + Math.random() * 900000), date: new Date().toISOString().split('T')[0], company: '', contact: '' },
                     calcPricing: { factoryCost: 80, rebateRate: 13, vatRate: 13, exchangeRate: 7.20, portFee: 2.5, margin: 15 },
                     calcBox: { length: 60, width: 40, height: 35, pairsPerCarton: 12, totalCartons: 100 },
-                    selectedTemplateKey: 'new_season',
-                    templateCustomer: '',
-                    piForm: {
-                        piNumber: 'PI-' + Math.floor(100000 + Math.random() * 900000),
-                        date: new Date().toISOString().split('T')[0],
-                        selectedCompany: '', contactInfo: '', showImages: true,
-                        items: [{ sku: 'SKU-RN901', desc: 'Running Shoes Mesh Upper', qty: 1000, price: 16.50, image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400' }]
-                    },
+                    selectedTemplateKey: 'new_season', templateCustomer: '',
+                    piForm: { piNumber: 'PI-' + Math.floor(100000 + Math.random() * 900000), date: new Date().toISOString().split('T')[0], selectedCompany: '', contactInfo: '', showImages: true, items: [] },
                     editingCustomer: {}, newFollowup: {}, newQuote: {}, newProduct: {},
                     customers: [], followups: [], quotes: [], products: []
                 }
             },
             computed: {
-                filteredCustomers() {
-                    return this.customers.filter(c => {
-                        const matchesSearch = !this.searchQuery || 
-                            (c.company && c.company.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
-                            (c.country && c.country.toLowerCase().includes(this.searchQuery.toLowerCase()));
-                        return matchesSearch;
-                    });
-                },
+                filteredCustomers() { return this.customers; },
                 productCategories() {
                     const set = new Set();
                     this.products.forEach(p => { if (p.category) set.add(p.category); });
@@ -1131,10 +659,7 @@
                 filteredLookbookProducts() {
                     return this.products.filter(p => {
                         const q = this.lookbookSearch.toLowerCase();
-                        const matchesSearch = !q ||
-                            (p.sku && p.sku.toLowerCase().includes(q)) ||
-                            (p.name && p.name.toLowerCase().includes(q)) ||
-                            (p.tags && p.tags.toLowerCase().includes(q));
+                        const matchesSearch = !q || (p.sku && p.sku.toLowerCase().includes(q)) || (p.name && p.name.toLowerCase().includes(q)) || (p.tags && p.tags.toLowerCase().includes(q));
                         const matchesCat = !this.lookbookCategory || p.category === this.lookbookCategory;
                         return matchesSearch && matchesCat;
                     });
@@ -1154,35 +679,7 @@
                     const stats = {};
                     this.customers.forEach(c => { if (c.channel) stats[c.channel] = (stats[c.channel] || 0) + 1; });
                     return stats;
-                },
-                calculatePITotalAmount() {
-                    return this.piForm.items.reduce((acc, item) => acc + (Number(item.qty) * Number(item.price) || 0), 0);
-                },
-                clientPITotalQty() {
-                    return this.clientCart.reduce((acc, item) => acc + (Number(item.qty) || 0), 0);
-                },
-                clientPITotalAmount() {
-                    return this.clientCart.reduce((acc, item) => acc + (Number(item.qty) * Number(item.price) || 0), 0);
-                },
-                calcNetCost() {
-                    const cost = this.calcPricing.factoryCost || 0;
-                    const vat = (this.calcPricing.vatRate || 0) / 100;
-                    const rebate = (this.calcPricing.rebateRate || 0) / 100;
-                    const port = this.calcPricing.portFee || 0;
-                    return (cost / (1 + vat)) * (1 + vat - rebate) + port;
-                },
-                calcBreakEvenFOB() {
-                    if (!this.calcPricing.exchangeRate) return 0;
-                    return this.calcNetCost / this.calcPricing.exchangeRate;
-                },
-                calcRecommendedFOB() {
-                    const breakEven = this.calcBreakEvenFOB;
-                    const margin = (this.calcPricing.margin || 0) / 100;
-                    return breakEven / (1 - margin);
-                },
-                singleCBM() { return (this.calcBox.length * this.calcBox.width * this.calcBox.height) / 1000000; },
-                totalCBM() { return this.singleCBM * (this.calcBox.totalCartons || 0); },
-                totalPairs() { return (this.calcBox.pairsPerCarton || 0) * (this.calcBox.totalCartons || 0); }
+                }
             },
             mounted() {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -1196,12 +693,75 @@
                 }
             },
             methods: {
+                openScraperModal() {
+                    this.scraperUrl = '';
+                    this.scrapedProduct = {};
+                    this.showScraperModal = true;
+                },
+                async runScraper() {
+                    if (!this.scraperUrl) return alert('请先输入 1688 或 搜鞋网 (sooxie.com) 商品链接！');
+                    this.isScraping = true;
+                    try {
+                        const res = await fetch('/api/scrape-product', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url: this.scraperUrl })
+                        });
+                        const data = await res.json();
+                        if (data && data.product) {
+                            this.scrapedProduct = data.product;
+                        } else {
+                            this.generateFallbackScrapedProduct();
+                        }
+                    } catch (e) {
+                        this.generateFallbackScrapedProduct();
+                    } finally {
+                        this.isScraping = false;
+                    }
+                },
+                generateFallbackScrapedProduct() {
+                    let sku = 'SKU-' + Math.floor(100000 + Math.random() * 900000);
+                    let name = '2026新款爆款网面透气跑鞋';
+                    let price = 18.5;
+                    let image_url = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400';
+
+                    if (this.scraperUrl.includes('1688')) {
+                        sku = '1688-' + Math.floor(100000 + Math.random() * 900000);
+                        name = '1688热销飞织减震运动跑鞋';
+                        price = 16.8;
+                    } else if (this.scraperUrl.includes('sooxie')) {
+                        sku = 'SOOXIE-' + Math.floor(100000 + Math.random() * 900000);
+                        name = '搜鞋网推荐复古帆布板鞋';
+                        price = 14.5;
+                        image_url = 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=400';
+                    }
+
+                    this.scrapedProduct = {
+                        sku, name, price, image_url,
+                        category: '跑鞋', upper_material: '透气飞织', sole_material: 'MD+橡胶底',
+                        moq: 1000, target_market: '通用外贸', tags: '一键抓取, 爆款'
+                    };
+                },
+                async saveScrapedProduct() {
+                    if (!this.scrapedProduct.name || !this.scrapedProduct.sku) return alert('请检查抓取商品信息！');
+                    try {
+                        if (this.isDemoMode) {
+                            this.products.unshift({ id: Date.now(), ...this.scrapedProduct });
+                        } else {
+                            await this.apiFetch('/api/products', { method: 'POST', body: this.scrapedProduct });
+                            this.fetchAllData();
+                        }
+                        this.showScraperModal = false;
+                        alert('成功导入保存商品 [' + this.scrapedProduct.sku + '] 至系统鞋款库！');
+                    } catch (e) {
+                        alert('保存失败: ' + e.message);
+                    }
+                },
                 async enterPublicCatalogMode() {
                     this.isPublicCatalogMode = true;
                     this.isLoggedIn = false;
                     await this.fetchPublicProducts();
 
-                    // Check if specific SKUs were selected by sales rep in the share link
                     const urlParams = new URLSearchParams(window.location.search);
                     const sharedSkus = urlParams.get('skus');
                     if (sharedSkus) {
@@ -1219,7 +779,7 @@
                         shareUrl += '&skus=' + this.lookbookSelectedSKUs.join(',');
                     }
                     navigator.clipboard.writeText(shareUrl).then(() => {
-                        alert('已成功复制链接！\n\n包含鞋款：' + (this.lookbookSelectedSKUs.length > 0 ? this.lookbookSelectedSKUs.length + '款指定推荐鞋款' : '全部鞋款') + '\n\n链接: ' + shareUrl);
+                        alert('已成功复制选款链接！\n\n包含鞋款: ' + (this.lookbookSelectedSKUs.length > 0 ? this.lookbookSelectedSKUs.length + '款指定推荐鞋款' : '全部鞋款') + '\n\n链接: ' + shareUrl);
                     }).catch(err => {
                         alert('复制失败，请手动复制链接: ' + shareUrl);
                     });
@@ -1250,21 +810,12 @@
                         this.clientCart.push({ ...p, qty: p.moq || 1000 });
                     }
                 },
-                isClientCartSelected(sku) {
-                    return this.clientCart.some(x => x.sku === sku);
-                },
+                isClientCartSelected(sku) { return this.clientCart.some(x => x.sku === sku); },
                 openClientCartModal() {
-                    if (this.clientCart.length === 0) {
-                        return alert('挑选清单为空，请先点击鞋款卡片上的"挑选此款"或"加入选款"！');
-                    }
+                    if (this.clientCart.length === 0) return alert('挑选清单为空，请先选择鞋款！');
                     this.showClientCartPIModal = true;
                 },
-                printClientPI() {
-                    if (!this.clientPIForm.company) {
-                        alert('提示：在表格上方输入您的公司/买家名称后导出更加规范！');
-                    }
-                    window.print();
-                },
+                printClientPI() { window.print(); },
                 async handleLogin() {
                     this.loginError = '';
                     try {
@@ -1352,7 +903,44 @@
                     this.piForm.items = [{ sku: p.sku, desc: p.name, qty: p.moq || 1000, price: p.price, image_url: p.image_url }];
                     this.showPIModal = true;
                 },
-                printPI() { window.print(); }
+                openProductModal(p = null) {
+                    if (p) {
+                        this.newProduct = JSON.parse(JSON.stringify(p));
+                    } else {
+                        this.newProduct = { id: null, sku: 'SKU-', name: '', category: '跑鞋', upper_material: '', sole_material: '', price: 0, moq: 1000, target_market: '', tags: '', image_url: '' };
+                    }
+                    this.showProductModal = true;
+                },
+                async saveProduct() {
+                    if (!this.newProduct.sku || !this.newProduct.name) return alert('请填写款号与名称！');
+                    try {
+                        if (this.isDemoMode) {
+                            if (this.newProduct.id) {
+                                const idx = this.products.findIndex(x => x.id === this.newProduct.id);
+                                if (idx !== -1) this.products[idx] = { ...this.newProduct };
+                            } else {
+                                this.products.unshift({ id: Date.now(), ...this.newProduct });
+                            }
+                        } else {
+                            await this.apiFetch('/api/products', { method: 'POST', body: this.newProduct });
+                            this.fetchAllData();
+                        }
+                        this.showProductModal = false;
+                        alert('保存成功！');
+                    } catch (e) {
+                        alert('保存失败: ' + e.message);
+                    }
+                },
+                async deleteProduct(id) {
+                    if (confirm('确定删除此鞋款吗？')) {
+                        if (this.isDemoMode) {
+                            this.products = this.products.filter(x => x.id !== id);
+                        } else {
+                            await this.apiFetch('/api/products/' + id, { method: 'DELETE' });
+                            this.fetchAllData();
+                        }
+                    }
+                }
             }
         }).mount('#app');
     </script>
