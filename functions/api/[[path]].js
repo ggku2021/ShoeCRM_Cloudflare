@@ -92,7 +92,6 @@ export async function onRequest(context) {
                 let price = 0;
                 let sku = '';
 
-                // 1. Extract SKU / Item ID
                 if (targetUrl.includes('1688.com')) {
                     const match = targetUrl.match(/offer\/(\d+)\.html/);
                     sku = match ? '1688-' + match[1] : '1688-' + Math.floor(100000 + Math.random() * 900000);
@@ -103,16 +102,13 @@ export async function onRequest(context) {
                     sku = 'SKU-' + Math.floor(100000 + Math.random() * 900000);
                 }
 
-                // 2. Extract Title
                 const titleMatch = html.match(/<title>(.*?)<\/title>/i) || html.match(/meta property="og:title" content="(.*?)"/i);
                 if (titleMatch) {
                     name = titleMatch[1].replace(/-1688\.com|-阿里巴巴|-搜鞋网|sooxie\.com/gi, '').trim();
                 }
 
-                // 3. Extract Real Product Main Image (Smart Filtering Bad Platform Banners/Sprites like -tps- or 60000000)
                 const badKeywords = ['-tps-', '60000000', 'sprite', 'logo', 'banner', 'header', 'icon', 'avatar', 'watermark'];
 
-                // 3a. Check 1688 cbu01 CDN main images
                 const cbuMatches = html.match(/https?:\/\/cbu01\.alicdn\.com\/img\/ibank\/[^\s"'<>]+?\.(?:jpg|jpeg|webp|png)/gi) || [];
                 for (const img of cbuMatches) {
                     if (!badKeywords.some(b => img.includes(b))) {
@@ -121,7 +117,6 @@ export async function onRequest(context) {
                     }
                 }
 
-                // 3b. Check JSON imageUrl / offerImage / mainImage
                 if (!image_url) {
                     const jsonMatches = html.match(/"(?:imageUrl|offerImage|mainImage|fullPathImageURI)":"(https?:\/\/[^"]+)"/gi) || [];
                     for (const m of jsonMatches) {
@@ -133,7 +128,6 @@ export async function onRequest(context) {
                     }
                 }
 
-                // 3c. Check Sooxie / xiecdn image
                 if (!image_url) {
                     const sooxieMatches = html.match(/https?:\/\/(?:images\.xiecdn\.com|www\.sooxie\.com\/upload)[^\s"'<>]+?\.(?:jpg|jpeg|webp|png)/gi) || [];
                     for (const img of sooxieMatches) {
@@ -144,7 +138,6 @@ export async function onRequest(context) {
                     }
                 }
 
-                // 3d. Fallback imgextra .jpg
                 if (!image_url) {
                     const extraMatches = html.match(/https?:\/\/img\.alicdn\.com\/imgextra\/[^\s"'<>]+?\.(?:jpg|jpeg|webp)/gi) || [];
                     for (const img of extraMatches) {
@@ -155,7 +148,6 @@ export async function onRequest(context) {
                     }
                 }
 
-                // 4. Extract Price
                 const priceMatch = html.match(/"price":"?([\d\.]+)"?/i) || 
                                    html.match(/meta property="og:product:price" content="(.*?)"/i) ||
                                    html.match(/￥\s*([\d\.]+)/) ||
@@ -318,7 +310,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 7. Products Endpoint
+        // 7. Products Endpoint - Resilient UPDATE & INSERT
         if (path === '/api/products') {
             if (method === 'GET') {
                 try {
@@ -332,20 +324,24 @@ export async function onRequest(context) {
             if (method === 'POST') {
                 const b = await getJsonBody();
 
-                // Auto-migration: ensure image_url exists
+                // 尝试建增 image_url 列
                 try { await env.DB.prepare('ALTER TABLE products ADD COLUMN image_url TEXT').run(); } catch(colErr) {}
 
+                // 解析 ID：如果 ID 存在（数字或字符串），则进行 UPDATE 编辑；否则 INSERT
+                const numId = b.id ? Number(b.id) : 0;
+                const isUpdate = numId > 0 && numId < 10000000000;
+
                 try {
-                    if (b.id && typeof b.id === 'number' && b.id < 10000000000) {
+                    if (isUpdate) {
                         await env.DB.prepare(
-                            `UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=?, image_url=? WHERE id=?`
+                            `UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=?, image_url=? WHERE id=? OR sku=?`
                         ).bind(
                             b.sku || '', b.name || '', b.category || '跑鞋',
                             b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
                             Number(b.moq) || 1000, b.target_market || '', b.tags || '',
-                            b.image_url || '', b.id
+                            b.image_url || '', numId, b.sku || ''
                         ).run();
-                        return new Response(JSON.stringify({ success: true, id: b.id }), { headers });
+                        return new Response(JSON.stringify({ success: true, id: numId }), { headers });
                     } else {
                         const res = await env.DB.prepare(
                             `INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url) 
@@ -361,15 +357,26 @@ export async function onRequest(context) {
                     }
                 } catch (d1Err) {
                     try {
-                        const res = await env.DB.prepare(
-                            `INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags) 
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-                        ).bind(
-                            b.sku || '', b.name || '', b.category || '跑鞋',
-                            b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
-                            Number(b.moq) || 1000, b.target_market || '', b.tags || ''
-                        ).run();
-                        return new Response(JSON.stringify({ success: true, id: res.meta ? res.meta.last_row_id : Date.now() }), { headers });
+                        if (isUpdate) {
+                            await env.DB.prepare(
+                                `UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=? WHERE id=? OR sku=?`
+                            ).bind(
+                                b.sku || '', b.name || '', b.category || '跑鞋',
+                                b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
+                                Number(b.moq) || 1000, b.target_market || '', b.tags || '', numId, b.sku || ''
+                            ).run();
+                            return new Response(JSON.stringify({ success: true, id: numId }), { headers });
+                        } else {
+                            const res = await env.DB.prepare(
+                                `INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags) 
+                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                            ).bind(
+                                b.sku || '', b.name || '', b.category || '跑鞋',
+                                b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
+                                Number(b.moq) || 1000, b.target_market || '', b.tags || ''
+                            ).run();
+                            return new Response(JSON.stringify({ success: true, id: res.meta ? res.meta.last_row_id : Date.now() }), { headers });
+                        }
                     } catch (fatalErr) {
                         return new Response(JSON.stringify({ error: '数据库写入失败: ' + fatalErr.message }), { status: 500, headers });
                     }
@@ -377,10 +384,16 @@ export async function onRequest(context) {
             }
         }
 
+        // 支持通过 ID 或 SKU 删除商品
         if (path.startsWith('/api/products/')) {
-            const id = path.split('/')[3];
+            const param = path.split('/')[3];
             if (method === 'DELETE') {
-                await env.DB.prepare('DELETE FROM products WHERE id = ?').bind(id).run();
+                const numId = Number(param);
+                if (numId > 0) {
+                    await env.DB.prepare('DELETE FROM products WHERE id = ? OR sku = ?').bind(numId, param).run();
+                } else {
+                    await env.DB.prepare('DELETE FROM products WHERE sku = ?').bind(param).run();
+                }
                 return new Response(JSON.stringify({ success: true }), { headers });
             }
         }

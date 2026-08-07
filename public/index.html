@@ -970,33 +970,57 @@
                     this.showProductModal = true;
                 },
                 async saveProduct() {
-                    if (!this.newProduct.sku || !this.newProduct.name) return alert('请填写款号与名称！');
+                    if (!this.newProduct.sku || !this.newProduct.name) {
+                        return alert('请填写款号 (SKU) 和 鞋款名称！');
+                    }
                     try {
-                        if (this.isDemoMode) {
-                            if (this.newProduct.id) {
-                                const idx = this.products.findIndex(x => x.id === this.newProduct.id);
-                                if (idx !== -1) this.products[idx] = { ...this.newProduct };
-                            } else {
-                                this.products.unshift({ id: Date.now(), ...this.newProduct });
-                            }
+                        const savedItem = { id: this.newProduct.id || Date.now(), ...this.newProduct };
+
+                        // 1. 本地即时响应式更新，并同步保存到 localStorage
+                        if (this.newProduct.id) {
+                            const idx = this.products.findIndex(x => x.id === this.newProduct.id || x.sku === this.newProduct.sku);
+                            if (idx !== -1) this.products[idx] = savedItem;
+                            else this.products.unshift(savedItem);
                         } else {
-                            await this.apiFetch('/api/products', { method: 'POST', body: this.newProduct });
-                            this.fetchAllData();
+                            this.products.unshift(savedItem);
                         }
+                        localStorage.setItem('shoecrm_local_products', JSON.stringify(this.products));
+
+                        // 2. 云端 D1 数据库同步
+                        if (!this.isDemoMode) {
+                            const res = await this.apiFetch('/api/products', { method: 'POST', body: this.newProduct });
+                            if (res && res.id) savedItem.id = res.id;
+                            await this.fetchAllData();
+                        }
+
                         this.showProductModal = false;
-                        alert('保存成功！');
+                        alert('鞋款信息保存/更新成功！');
                     } catch (e) {
                         alert('保存失败: ' + e.message);
                     }
                 },
                 async deleteProduct(id) {
-                    if (confirm('确定删除此鞋款吗？')) {
-                        if (this.isDemoMode) {
-                            this.products = this.products.filter(x => x.id !== id);
-                        } else {
-                            await this.apiFetch('/api/products/' + id, { method: 'DELETE' });
-                            this.fetchAllData();
+                    const targetProduct = this.products.find(x => x.id === id);
+                    const sku = targetProduct ? targetProduct.sku : '';
+
+                    if (confirm('确定要删除该鞋款吗？')) {
+                        // 1. 本地即时从数组中过滤剔除，并同步写回 localStorage，防止旧数据复活
+                        this.products = this.products.filter(x => x.id !== id && (sku ? x.sku !== sku : true));
+                        localStorage.setItem('shoecrm_local_products', JSON.stringify(this.products));
+
+                        // 2. 云端 D1 数据库同步删除
+                        if (!this.isDemoMode) {
+                            try {
+                                await this.apiFetch('/api/products/' + id, { method: 'DELETE' });
+                                if (sku) {
+                                    await this.apiFetch('/api/products/' + sku, { method: 'DELETE' });
+                                }
+                            } catch (err) {
+                                console.warn('DELETE remote product warning:', err);
+                            }
+                            await this.fetchAllData();
                         }
+                        alert('商品已成功彻底删除！');
                     }
                 }
             }
