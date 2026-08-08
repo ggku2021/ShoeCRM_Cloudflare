@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ßæ???®Æ CRM ?? v6.0 - ???????</title>
+    <title>ÔøΩÔøΩ???ÔøΩÔøΩ CRM ?? v6.0 - ???????</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -43,7 +43,7 @@
             <div class="flex items-center gap-3">
                 <button @click="openClientCartModal" class="bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 shadow transition">
                     <i class="fa-solid fa-basket-shopping text-base"></i>
-                    <span>?????ßæ ({{ clientCart.length }})</span>
+                    <span>?????ÔøΩÔøΩ ({{ clientCart.length }})</span>
                 </button>
                 <button @click="exitPublicMode" class="text-xs text-slate-400 hover:text-white underline px-2 py-1">
                     <i class="fa-solid fa-right-to-bracket me-1"></i> ??????
@@ -59,7 +59,7 @@
                         <i class="fa-solid fa-shoe-prints text-3xl"></i>
                     </div>
                     <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v6.0</h2>
-                    <p class="text-sm text-gray-500 mt-1">ßæ????®Æ???? ?? ??????? ?? 1688/??ßæ???? ?? ????PI</p>
+                    <p class="text-sm text-gray-500 mt-1">ÔøΩÔøΩ????ÔøΩÔøΩ???? ?? ??????? ?? 1688/??ÔøΩÔøΩ???? ?? ????PI</p>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -90,7 +90,7 @@
                 <i class="fa-solid fa-shoe-prints text-2xl text-blue-400"></i>
                 <div>
                     <h1 class="font-bold text-lg leading-none">ShoeCRM Pro</h1>
-                    <span class="text-xs text-slate-400">??®Æßæ????? v6.0</span>
+                    <span class="text-xs text-slate-400">??ÔøΩÔøΩÔøΩÔøΩ????? v6.0</span>
                 </div>
             </div>
 
@@ -116,13 +116,13 @@
                     <i class="fa-solid fa-file-invoice-dollar w-5"></i><span>{{ lang === 'zh' ? '??????????' : 'Quotes & Samples' }}</span>
                 </button>
                 <button @click="currentTab = 'products'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'products' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
-                    <i class="fa-solid fa-box-archive w-5"></i><span>{{ lang === 'zh' ? 'ßæ???' : 'Shoe Catalog' }}</span>
+                    <i class="fa-solid fa-box-archive w-5"></i><span>{{ lang === 'zh' ? 'ÔøΩÔøΩ???' : 'Shoe Catalog' }}</span>
                 </button>
                 <button @click="currentTab = 'tools'" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', currentTab === 'tools' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
                     <i class="fa-solid fa-calculator w-5"></i><span>{{ lang === 'zh' ? '?????????' : 'Tools & Templates' }}</span>
                 </button>
                 <button @click="openPIModal()" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-emerald-400 hover:bg-slate-800']">
-                    <i class="fa-solid fa-file-pdf w-5"></i><span>{{ lang === 'zh' ? '??????®ÆPI' : 'Create PI' }}</span>
+                    <i class="fa-solid fa-file-pdf w-5"></i><span>{{ lang === 'zh' ? '??????ÔøΩÔøΩPI' : 'Create PI' }}</span>
                 </button>
             </nav>
 
@@ -169,14 +169,14 @@
             <div v-if="!isPublicCatalogMode && currentTab === 'dashboard'" class="space-y-6">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">{{ lang === 'zh' ? '??????????' : 'Business Dashboard' }}</h2>
-                    <p class="text-sm text-gray-500">??®Æßæ?????????????????</p>
+                    <p class="text-sm text-gray-500">??ÔøΩÔøΩÔøΩÔøΩ?????????????????</p>
                 </div>
 
                 <div v-if="overdueCount > 0" class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <i class="fa-solid fa-triangle-exclamation text-red-500 text-xl"></i>
                         <div>
-                            <p class="font-bold text-red-800 text-sm">??????? {{ overdueCount }} ??????¶ƒ????????</p>
+                            <p class="font-bold text-red-800 text-sm">??????? {{ overdueCount }} ??????ÔøΩÔøΩ????????</p>
                             <p class="text-xs text-red-600">?????????????????????????</p>
                         </div>
                     </div>
@@ -216,7 +216,7 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-filter text-blue-500"></i> ?????¶«?? (Customer Funnel)</h3>
+                        <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-filter text-blue-500"></i> ?????ÔøΩÔøΩ?? (Customer Funnel)</h3>
                         <div class="space-y-3">
                             <div v-for="(count, stage) in stageStats" :key="stage" class="space-y-1">
                                 <div class="flex justify-between text-xs font-medium">
@@ -255,12 +255,12 @@
                             <span>{{ isPublicCatalogMode ? '???????????? (Product Showcase)' : '?????????? (Product Lookbook)' }}</span>
                         </h2>
                         <p class="text-sm text-gray-500">
-                            {{ isPublicCatalogMode ? '????????????ßæ???????çÀ?????????????????????? (PI)' : '???????ßæ????????????????????????????????????????????????????PI' }}
+                            {{ isPublicCatalogMode ? '????????????ÔøΩÔøΩ???????ÔøΩÔøΩ?????????????????????? (PI)' : '???????ÔøΩÔøΩ????????????????????????????????????????????????????PI' }}
                         </p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
                         <button v-if="!isPublicCatalogMode" @click="openScraperModal" class="bg-gradient-to-r from-orange-500 to-amber-600 hover:opacity-90 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
-                            <i class="fa-solid fa-spider"></i> ??1688/??ßæ?????
+                            <i class="fa-solid fa-spider"></i> ??1688/??ÔøΩÔøΩ?????
                         </button>
                         <button v-if="!isPublicCatalogMode" @click="copyShareableCatalogLink" class="bg-teal-600 hover:bg-teal-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
                             <i class="fa-solid fa-paper-plane"></i> ????????????????? (????{{ lookbookSelectedSKUs.length }}??)
@@ -306,8 +306,8 @@
                                     <span v-if="p.target_market" class="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded font-medium">{{ p.target_market }}</span>
                                 </div>
                                 <div class="text-xs text-gray-500 space-y-1 pt-1">
-                                    <p><strong>ßæ??????</strong>{{ p.upper_material || '¶ƒ??' }}</p>
-                                    <p><strong>ßæ??????</strong>{{ p.sole_material || '¶ƒ??' }}</p>
+                                    <p><strong>ÔøΩÔøΩ??????</strong>{{ p.upper_material || 'ÔøΩÔøΩ??' }}</p>
+                                    <p><strong>ÔøΩÔøΩ??????</strong>{{ p.sole_material || 'ÔøΩÔøΩ??' }}</p>
                                     <p v-if="p.tags"><strong>????????</strong><span class="text-blue-600">{{ p.tags }}</span></p>
                                 </div>
                             </div>
@@ -330,7 +330,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h2 class="text-2xl font-bold text-gray-800">??????????</h2>
-                        <p class="text-sm text-gray-500">?????????®¢?ßæ????????????</p>
+                        <p class="text-sm text-gray-500">?????????ÔøΩÔøΩ?ÔøΩÔøΩ????????????</p>
                     </div>
                     <button @click="openCustomerModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
                         <i class="fa-solid fa-plus"></i> ???????
@@ -340,7 +340,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <input type="text" v-model="searchQuery" placeholder="?????????????????????..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     <select v-model="filterLevel" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-                        <option value="">???ß·?????</option>
+                        <option value="">???ÔøΩÔøΩ?????</option>
                         <option value="VIP">VIP</option>
                         <option value="?????">?????</option>
                         <option value="?????">?????</option>
@@ -348,8 +348,8 @@
                         <option value="??????">??????</option>
                     </select>
                     <select v-model="filterStage" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-                        <option value="">???ß‹??????</option>
-                        <option value="???¶Õ??">???¶Õ??</option>
+                        <option value="">???ÔøΩÔøΩ??????</option>
+                        <option value="???ÔøΩÔøΩ??">???ÔøΩÔøΩ??</option>
                         <option value="??????">??????</option>
                         <option value="?????">?????</option>
                         <option value="???????">???????</option>
@@ -373,11 +373,11 @@
                             </div>
 
                             <div class="space-y-1.5 text-xs text-gray-600 border-t border-b border-gray-100 py-3 my-3">
-                                <div><strong class="text-gray-700">???ßæ??</strong>{{ c.preferred_styles || '¶ƒ???' }}</div>
-                                <div><strong class="text-gray-700">????????</strong>{{ c.preferences || '¶ƒ???' }}</div>
+                                <div><strong class="text-gray-700">???ÔøΩÔøΩ??</strong>{{ c.preferred_styles || 'ÔøΩÔøΩ???' }}</div>
+                                <div><strong class="text-gray-700">????????</strong>{{ c.preferences || 'ÔøΩÔøΩ???' }}</div>
                                 <div><strong class="text-gray-700">??????/???</strong>{{ c.target_market }} | {{ c.target_price }}</div>
                                 <div><strong class="text-gray-700">?????????</strong>{{ c.moq }}</div>
-                                <div><strong class="text-gray-700">???????</strong>{{ c.sales_rep || '¶ƒ???' }}</div>
+                                <div><strong class="text-gray-700">???????</strong>{{ c.sales_rep || 'ÔøΩÔøΩ???' }}</div>
                             </div>
                         </div>
 
@@ -389,7 +389,7 @@
                                 </div>
                             </div>
                             <button @click="showSmartMatch(c)" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 shadow-sm hover:opacity-90">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i> ??????????ßæ??
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> ??????????ÔøΩÔøΩ??
                             </button>
                         </div>
                     </div>
@@ -400,15 +400,15 @@
             <div v-if="!isPublicCatalogMode && currentTab === 'exhibition'" class="space-y-6">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">??? / ?????????????????</h2>
-                    <p class="text-sm text-gray-500">??????????????????????????çÀ?????????</p>
+                    <p class="text-sm text-gray-500">??????????????????????????ÔøΩÔøΩ?????????</p>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
-                        <h3 class="font-bold text-gray-700 flex items-center gap-2"><i class="fa-solid fa-qrcode text-amber-500"></i> ???/???ßæ??</h3>
+                        <h3 class="font-bold text-gray-700 flex items-center gap-2"><i class="fa-solid fa-qrcode text-amber-500"></i> ???/???ÔøΩÔøΩ??</h3>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">?????????? *</label>
                             <select v-model="exhibitionTargetCustomer" class="w-full border p-2 rounded bg-white text-sm">
-                                <option value="">-- ????????ß·?? --</option>
+                                <option value="">-- ????????ÔøΩÔøΩ?? --</option>
                                 <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }} ({{ c.country }})</option>
                             </select>
                         </div>
@@ -416,7 +416,7 @@
                             <label class="block text-xs font-semibold text-gray-600 mb-1">???/?????????? (SKU)</label>
                             <div class="flex gap-2">
                                 <select v-model="exhibitionSelectedSKU" class="w-full border p-2 rounded bg-white text-sm">
-                                    <option value="">-- ???ßæ?? --</option>
+                                    <option value="">-- ???ÔøΩÔøΩ?? --</option>
                                     <option v-for="p in products" :key="p.id" :value="p.sku">{{ p.sku }} - {{ p.name }} (${{ p.price }})</option>
                                 </select>
                                 <button @click="addSelectedProductToCart" class="bg-blue-600 text-white px-4 py-2 rounded text-sm whitespace-nowrap">???</button>
@@ -431,7 +431,7 @@
                     </div>
                     <div class="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
                         <div>
-                            <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-basket-shopping text-blue-500"></i> ??????????çÀ ({{ exhibitionCart.length }}??)</h3>
+                            <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-basket-shopping text-blue-500"></i> ??????????ÔøΩÔøΩ ({{ exhibitionCart.length }}??)</h3>
                             <div class="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                                 <div v-for="(item, idx) in exhibitionCart" :key="idx" class="flex items-center justify-between p-3 border rounded-lg bg-slate-50">
                                     <div class="flex items-center gap-3">
@@ -450,8 +450,8 @@
             <div v-if="!isPublicCatalogMode && currentTab === 'followups'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h2 class="text-2xl font-bold text-gray-800">??????®π??</h2>
-                        <p class="text-sm text-gray-500">???????????????°‰¶»??????</p>
+                        <h2 class="text-2xl font-bold text-gray-800">??????ÔøΩÔøΩ??</h2>
+                        <p class="text-sm text-gray-500">???????????????ÔøΩÔøΩÔøΩ??????</p>
                     </div>
                     <button @click="openFollowupModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm">
                         <i class="fa-solid fa-plus"></i> ???????????
@@ -465,7 +465,7 @@
                                 <th class="p-3">????/????</th>
                                 <th class="p-3">??????????</th>
                                 <th class="p-3">????</th>
-                                <th class="p-3">?°‰¶»???/????</th>
+                                <th class="p-3">?ÔøΩÔøΩÔøΩ???/????</th>
                                 <th class="p-3">??????</th>
                                 <th class="p-3">????</th>
                             </tr>
@@ -526,16 +526,16 @@
                 </div>
             </div>
 
-            <!-- ??? 7. ßæ??? -->
+            <!-- ??? 7. ÔøΩÔøΩ??? -->
             <div v-if="!isPublicCatalogMode && currentTab === 'products'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h2 class="text-2xl font-bold text-gray-800">ßæ????????????</h2>
-                        <p class="text-sm text-gray-500">????ßæ?˛û????????? 1688/??ßæ?????????</p>
+                        <h2 class="text-2xl font-bold text-gray-800">ÔøΩÔøΩ????????????</h2>
+                        <p class="text-sm text-gray-500">????ÔøΩÔøΩ?ÔøΩÔøΩ????????? 1688/??ÔøΩÔøΩ?????????</p>
                     </div>
                     <div class="flex gap-2">
-                        <button @click="openScraperModal" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-spider"></i> ??1688/??ßæ??</button>
-                        <button @click="openProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-plus"></i> ??????ßæ??</button>
+                        <button @click="openScraperModal" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-spider"></i> ??1688/??ÔøΩÔøΩ??</button>
+                        <button @click="openProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-plus"></i> ??????ÔøΩÔøΩ??</button>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -559,17 +559,17 @@
                 </div>
             </div>
 
-            <!-- ??? 8. ??®Æ?????????? -->
+            <!-- ??? 8. ??ÔøΩÔøΩ?????????? -->
             <div v-if="!isPublicCatalogMode && currentTab === 'tools'" class="space-y-6">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800">??®Æ?????????????</h2>
-                    <p class="text-sm text-gray-500">??®Æ??????????CBM??????????ßæ??????????????</p>
+                    <h2 class="text-2xl font-bold text-gray-800">??ÔøΩÔøΩ?????????????</h2>
+                    <p class="text-sm text-gray-500">??ÔøΩÔøΩ??????????CBM??????????ÔøΩÔøΩ??????????????</p>
                 </div>
 
                 <!-- 8a. FOB??????????????? -->
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
                     <div class="flex justify-between items-center border-b pb-2">
-                        <h3 class="font-bold text-gray-800 text-base flex items-center gap-2"><i class="fa-solid fa-calculator text-emerald-600"></i> ??®Æ?????????????????? (FOB Price Calculator)</h3>
+                        <h3 class="font-bold text-gray-800 text-base flex items-center gap-2"><i class="fa-solid fa-calculator text-emerald-600"></i> ??ÔøΩÔøΩ?????????????????? (FOB Price Calculator)</h3>
                         <button @click="fetchLiveExchangeRate" class="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded border border-blue-200 hover:bg-blue-100 flex items-center gap-1">
                             <i class="fa-solid fa-arrows-rotate" :class="{'fa-spin': isFetchingRate}"></i> ????????????
                         </button>
@@ -582,8 +582,8 @@
                     </div>
                     <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-lg grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                         <div><span class="text-gray-600 block">???????????????</span><span class="text-lg font-bold text-slate-800">??{{ calcNetCost.toFixed(2) }} / ?</span></div>
-                        <div><span class="text-gray-600 block">???˜g???? (FOB USD)??</span><span class="text-lg font-bold text-amber-600">${{ calcBreakEvenFOB.toFixed(2) }} / ?</span></div>
-                        <div><span class="text-gray-600 block">?????®Æ???? (?????????)??</span><span class="text-xl font-bold text-emerald-700">${{ calcRecommendedFOB.toFixed(2) }} / ?</span></div>
+                        <div><span class="text-gray-600 block">???ÔøΩg???? (FOB USD)??</span><span class="text-lg font-bold text-amber-600">${{ calcBreakEvenFOB.toFixed(2) }} / ?</span></div>
+                        <div><span class="text-gray-600 block">?????ÔøΩÔøΩ???? (?????????)??</span><span class="text-xl font-bold text-emerald-700">${{ calcRecommendedFOB.toFixed(2) }} / ?</span></div>
                     </div>
                 </div>
 
@@ -602,9 +602,9 @@
                         </div>
                     </div>
 
-                    <!-- 8c. ßæ????? -->
+                    <!-- 8c. ÔøΩÔøΩ????? -->
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
-                        <h3 class="font-bold text-gray-800 text-base border-b pb-2 flex items-center gap-2"><i class="fa-solid fa-ruler-horizontal text-emerald-600"></i> ???????ßæ?????</h3>
+                        <h3 class="font-bold text-gray-800 text-base border-b pb-2 flex items-center gap-2"><i class="fa-solid fa-ruler-horizontal text-emerald-600"></i> ???????ÔøΩÔøΩ?????</h3>
                         <table class="w-full text-center text-xs border border-gray-200">
                             <thead class="bg-gray-50 font-bold"><tr><th class="p-2 border">??? (cm)</th><th class="p-2 border">??? (EU)</th><th class="p-2 border">???? (US ??)</th><th class="p-2 border">???? (US ?)</th></tr></thead>
                             <tbody>
@@ -619,7 +619,7 @@
                 <!-- 8d. ???????????????????? -->
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
                     <h3 class="font-bold text-gray-800 text-base border-b pb-2 flex items-center gap-2">
-                        <i class="fa-solid fa-envelope-open-text text-purple-600"></i> ??®Æ?????????????????????
+                        <i class="fa-solid fa-envelope-open-text text-purple-600"></i> ??ÔøΩÔøΩ?????????????????????
                     </h3>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -640,7 +640,7 @@
 
                             <div class="mt-4 p-3 bg-gray-50 rounded border text-xs text-gray-500">
                                 <p class="font-bold mb-1">?? ????????</p>
-                                <p>??????????????????????????? Outlook/Gmail ?????? WhatsApp ??????ßŸ????</p>
+                                <p>??????????????????????????? Outlook/Gmail ?????? WhatsApp ??????ÔøΩÔøΩ????</p>
                             </div>
                         </div>
 
@@ -670,27 +670,27 @@
             <div class="flex items-center gap-3 min-w-0">
                 <div class="bg-teal-100 text-teal-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm flex-shrink-0">{{ clientCart.length }}</div>
                 <div class="min-w-0">
-                    <p class="text-sm font-bold text-gray-800 truncate">{{ lang === 'zh' ? '“—?? : 'Selected' }} {{ clientCart.length }} {{ lang === 'zh' ? '?? : 'items' }} {{ lang === 'zh' ? '?? : 'total' }} {{ clientPITotalQty }} {{ lang === 'zh' ? '?? : 'pairs' }}</p>
-                    <p class="text-xs text-gray-500">{{ lang === 'zh' ? '‘§π¿◊‹∂Ó' : 'Est. Total' }} <span class="text-emerald-600 font-bold">${{ clientPITotalAmount.toFixed(2) }}</span></p>
+                    <p class="text-sm font-bold text-gray-800 truncate">Â∑≤ÈÄâ {{ clientCart.length }} Ê¨æ ¬∑ ÂÖ± {{ clientPITotalQty }} Âèå</p>
+                    <p class="text-xs text-gray-500">È¢Ñ‰º∞ÊÄªÈ¢ù <span class="text-emerald-600 font-bold">${{ clientPITotalAmount.toFixed(2) }}</span></p>
                 </div>
             </div>
             <button @click="openClientCartModal" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 shadow flex-shrink-0 transition">
-                <i class="fa-solid fa-paper-plane"></i> {{ lang === 'zh' ? 'Ã·Ωª∏¯…Ã?? : 'Submit to Seller' }}
+                <i class="fa-solid fa-paper-plane"></i> Êèê‰∫§ÁªôÂïÜÂÆ∂
             </button>
         </div>
 
         <!-- 6. 1688 / Sooxie Scraper Modal -->
 
-        <!-- 6. 1688 / ??ßæ?? ????? Modal -->
+        <!-- 6. 1688 / ??ÔøΩÔøΩ?? ????? Modal -->
         <div v-if="showScraperModal" class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl">
                 <div class="flex justify-between items-center border-b pb-3">
-                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-spider text-orange-600 text-xl"></i><span>?? 1688 / ??ßæ?? (sooxie.com) ???</span></h3>
+                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-spider text-orange-600 text-xl"></i><span>?? 1688 / ??ÔøΩÔøΩ?? (sooxie.com) ???</span></h3>
                     <button @click="showScraperModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
                 </div>
                 <div class="space-y-4 text-xs">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1.5">??????? URL (1688 ?? ??ßæ?? sooxie.com)</label>
+                        <label class="block font-bold text-slate-700 mb-1.5">??????? URL (1688 ?? ??ÔøΩÔøΩ?? sooxie.com)</label>
                         <div class="flex gap-2">
                             <input type="text" v-model="scraperUrl" placeholder="????: https://jinchen.sooxie.com/detail/2487248" class="flex-1 border p-2.5 rounded-lg text-xs focus:ring-2 focus:ring-orange-500">
                             <button @click="runScraper" :disabled="isScraping" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-lg font-bold flex items-center gap-1.5 whitespace-nowrap shadow"><i class="fa-solid fa-circle-notch fa-spin" v-if="isScraping"></i><span>{{ isScraping ? '????...' : '?????' }}</span></button>
@@ -701,7 +701,7 @@
                             <img :src="scrapedProduct.image_url" class="w-24 h-24 object-cover rounded border bg-white" @error="handleImageError">
                             <div class="flex-1 space-y-2">
                                 <div>
-                                    <label class="block text-gray-500 font-medium text-[10px]">ßæ?????? / ????</label>
+                                    <label class="block text-gray-500 font-medium text-[10px]">ÔøΩÔøΩ?????? / ????</label>
                                     <input type="text" v-model="scrapedProduct.name" class="w-full border p-1.5 rounded font-bold text-xs bg-white">
                                 </div>
                                 <div class="grid grid-cols-3 gap-2">
@@ -710,7 +710,7 @@
                                         <input type="number" step="0.1" v-model.number="scrapedProduct.priceRMB" @input="updateScrapedUSD" class="w-full border p-1.5 rounded text-xs font-bold text-slate-800 bg-white">
                                     </div>
                                     <div>
-                                        <label class="block text-gray-500 font-medium text-[10px]">??®Æ FOB ?? (USD $)</label>
+                                        <label class="block text-gray-500 font-medium text-[10px]">??ÔøΩÔøΩ FOB ?? (USD $)</label>
                                         <input type="number" step="0.1" v-model.number="scrapedProduct.price" class="w-full border p-1.5 rounded text-xs font-bold text-emerald-600 bg-white">
                                     </div>
                                     <div>
@@ -724,7 +724,7 @@
                             <label class="block text-gray-500 font-medium text-[10px]">????????????? URL (??????????????)</label>
                             <input type="text" v-model="scrapedProduct.image_url" class="w-full border p-1.5 rounded text-xs font-mono bg-white">
                         </div>
-                        <button @click="saveScrapedProduct" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow">??????????ßæ???</button>
+                        <button @click="saveScrapedProduct" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow">??????????ÔøΩÔøΩ???</button>
                     </div>
                 </div>
             </div>
@@ -820,7 +820,7 @@
             <div class="bg-white rounded-xl max-w-5xl w-full p-6 max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center border-b pb-3 mb-4 no-print">
                     <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                        <i class="fa-solid fa-file-pdf text-blue-600"></i> ?????? PDF ßæ??????? (Lookbook PDF Export)
+                        <i class="fa-solid fa-file-pdf text-blue-600"></i> ?????? PDF ÔøΩÔøΩ??????? (Lookbook PDF Export)
                     </h3>
                     <div class="flex gap-2">
                         <button @click="printLookbook" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-blue-700 flex items-center gap-1">
@@ -864,11 +864,11 @@
             </div>
         </div>
 
-        <!-- 9. ????????®Æ PI ???????? -->
+        <!-- 9. ????????ÔøΩÔøΩ PI ???????? -->
         <div v-if="showPIModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
                 <div class="flex flex-wrap justify-between items-center border-b pb-3 mb-4 no-print gap-2">
-                    <h3 class="text-lg font-bold text-gray-800">??????®Æ Proforma Invoice (PI)</h3>
+                    <h3 class="text-lg font-bold text-gray-800">??????ÔøΩÔøΩ Proforma Invoice (PI)</h3>
                     <div class="flex items-center gap-4">
                         <label class="inline-flex items-center cursor-pointer text-xs font-semibold text-gray-700">
                             <input type="checkbox" v-model="piForm.showImages" class="sr-only peer">
@@ -914,10 +914,10 @@
                     </div>
 
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-center justify-between gap-3 no-print">
-                        <span class="text-xs font-bold text-blue-800 flex items-center gap-1"><i class="fa-solid fa-boxes-packing"></i> ??ßæ????ßﬁ???????</span>
+                        <span class="text-xs font-bold text-blue-800 flex items-center gap-1"><i class="fa-solid fa-boxes-packing"></i> ??ÔøΩÔøΩ????ÔøΩÔøΩ???????</span>
                         <div class="flex-1 flex gap-2">
                             <select v-model="selectedProductToAdd" class="w-full border p-1.5 rounded text-xs bg-white">
-                                <option value="">-- ???????ßæ?? --</option>
+                                <option value="">-- ???????ÔøΩÔøΩ?? --</option>
                                 <option v-for="p in products" :key="p.id" :value="p">{{ p.sku }} | {{ p.name }} (${{ p.price }})</option>
                             </select>
                             <button @click="addSelectedProductToPI" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium whitespace-nowrap">???????</button>
@@ -990,7 +990,7 @@
 
         <div v-if="showProductModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-lg w-full p-6">
-                <h3 class="font-bold text-gray-800 mb-4">???/??ßæ??</h3>
+                <h3 class="font-bold text-gray-800 mb-4">???/??ÔøΩÔøΩ??</h3>
                 <input type="text" v-model="newProduct.sku" placeholder="SKU" class="w-full border p-2 rounded text-xs mb-2">
                 <input type="text" v-model="newProduct.name" placeholder="????" class="w-full border p-2 rounded text-xs mb-3">
                 <div class="flex justify-end gap-2"><button @click="showProductModal = false" class="px-4 py-2 border rounded">???</button><button @click="saveProduct()" class="px-4 py-2 bg-blue-600 text-white rounded">????</button></div>
@@ -1209,10 +1209,10 @@ Footwear Export Co., Ltd.`;
                 },
                 async submitClientPI() {
                     if (!this.clientPIForm.company) {
-                        return alert('????ß’?????????????');
+                        return alert('????ÔøΩÔøΩ?????????????');
                     }
                     if (this.clientCart.length === 0) {
-                        return alert('????????çÀ???????????ßæ??');
+                        return alert('????????ÔøΩÔøΩ???????????ÔøΩÔøΩ??');
                     }
                     try {
                         const quoteRecord = {
@@ -1224,7 +1224,7 @@ Footwear Export Co., Ltd.`;
                             qty: this.clientPITotalQty,
                             express_no: '????????????',
                             status: '??????????',
-                            feedback: '??????: ' + (this.clientPIForm.contact || '¶ƒ??') + ' | ???????: ' + this.clientCart.length + '??',
+                            feedback: '??????: ' + (this.clientPIForm.contact || 'ÔøΩÔøΩ??') + ' | ???????: ' + this.clientCart.length + '??',
                             sales_rep: '??????????'
                         };
 
@@ -1238,10 +1238,10 @@ Footwear Export Co., Ltd.`;
                             await this.apiFetch('/api/quotes', { method: 'POST', body: quoteRecord });
                         }
 
-                        alert('?? ???????????????????????????????????????ß·????????????????');
+                        alert('?? ???????????????????????????????????????ÔøΩÔøΩ????????????????');
                         this.showClientCartPIModal = false;
                     } catch (e) {
-                        alert('?????????ß›??????˛ü');
+                        alert('?????????ÔøΩÔøΩ??????ÔøΩÔøΩ');
                         this.showClientCartPIModal = false;
                     }
                 },
@@ -1306,10 +1306,10 @@ Footwear Export Co., Ltd.`;
                 },
                 generateFallbackScrapedProduct() {
                     let sku = 'SKU-' + Math.floor(100000 + Math.random() * 900000);
-                    let name = '??ßæ?? ' + sku;
+                    let name = '??ÔøΩÔøΩ?? ' + sku;
                     if (this.scraperUrl.includes('1688')) sku = '1688-' + Math.floor(100000 + Math.random() * 900000);
                     else if (this.scraperUrl.includes('sooxie')) sku = 'SOOXIE-' + Math.floor(100000 + Math.random() * 900000);
-                    this.scrapedProduct = { sku, name, priceRMB: 90.0, price: 12.5, image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400', category: '??ßæ', upper_material: '??????', sole_material: 'MD+????', moq: 1000, target_market: '?????®Æ', tags: '?????' };
+                    this.scrapedProduct = { sku, name, priceRMB: 90.0, price: 12.5, image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400', category: '??ÔøΩÔøΩ', upper_material: '??????', sole_material: 'MD+????', moq: 1000, target_market: '?????ÔøΩÔøΩ', tags: '?????' };
                 },
                 async saveScrapedProduct() {
                     if (!this.scrapedProduct.name || !this.scrapedProduct.sku) return alert('??????????????');
@@ -1326,7 +1326,7 @@ Footwear Export Co., Ltd.`;
                             await this.fetchAllData();
                         }
                         this.showScraperModal = false;
-                        alert('?????????? [' + this.scrapedProduct.sku + '] ??ßæ???');
+                        alert('?????????? [' + this.scrapedProduct.sku + '] ??ÔøΩÔøΩ???');
                     } catch (e) {
                         alert('???????: ' + e.message);
                     }
@@ -1365,7 +1365,7 @@ Footwear Export Co., Ltd.`;
                 },
                 loadDefaultPublicProducts() {
                     this.products = [
-                        { id: 1, sku: 'SKU-RN901', name: '????????????ßæ', category: '??ßæ', upper_material: '??????', sole_material: 'MD+??', price: 16.5, moq: 1000, image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400' }
+                        { id: 1, sku: 'SKU-RN901', name: '????????????ÔøΩÔøΩ', category: '??ÔøΩÔøΩ', upper_material: '??????', sole_material: 'MD+??', price: 16.5, moq: 1000, image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400' }
                     ];
                 },
                 toggleClientCart(p) {
@@ -1375,7 +1375,7 @@ Footwear Export Co., Ltd.`;
                 },
                 isClientCartSelected(sku) { return this.clientCart.some(x => x.sku === sku); },
                 openClientCartModal() {
-                    if (this.clientCart.length === 0) return alert('????çÀ????');
+                    if (this.clientCart.length === 0) return alert('????ÔøΩÔøΩ????');
                     this.showClientCartPIModal = true;
                 },
                 async handleLogin() {
@@ -1406,7 +1406,7 @@ Footwear Export Co., Ltd.`;
                     options.headers = { ...options.headers, 'Authorization': 'Bearer ' + this.token, 'Content-Type': 'application/json' };
                     if (options.body && typeof options.body !== 'string') options.body = JSON.stringify(options.body);
                     const res = await fetch(url, options);
-                    if (res.status === 401) { this.logout(); throw new Error('????ßπ'); }
+                    if (res.status === 401) { this.logout(); throw new Error('????ÔøΩÔøΩ'); }
                     const text = await res.text();
                     try { return JSON.parse(text); } catch(e) { throw new Error('???????'); }
                 },
@@ -1456,13 +1456,13 @@ Footwear Export Co., Ltd.`;
                     this.editingCustomer = {
                         company: '', country: '', contact: '', contact_info: '',
                         level: 'VIP', channel: '???(????/??????)', date: new Date().toISOString().split('T')[0],
-                        stage: '???¶Õ??', preferred_styles: '', preferences: '', target_price: '',
+                        stage: '???ÔøΩÔøΩ??', preferred_styles: '', preferences: '', target_price: '',
                         target_market: '', moq: '', sales_rep: this.currentUser.name, notes: ''
                     };
                     this.showCustomerModal = true;
                 },
                 async saveCustomer() {
-                    if (!this.editingCustomer.company) return alert('????ß’????????');
+                    if (!this.editingCustomer.company) return alert('????ÔøΩÔøΩ????????');
                     if (this.isDemoMode) this.customers.unshift({ id: Date.now(), ...this.editingCustomer });
                     else { await this.apiFetch('/api/customers', { method: 'POST', body: this.editingCustomer }); await this.fetchAllData(); }
                     this.showCustomerModal = false;
@@ -1484,7 +1484,7 @@ Footwear Export Co., Ltd.`;
                 async deleteQuote(id) { if (confirm('????????')) { this.quotes = this.quotes.filter(x => x.id !== id); if (!this.isDemoMode) await this.apiFetch('/api/quotes/' + id, { method: 'DELETE' }); } },
                 openProductModal(p = null) { if (p) this.newProduct = JSON.parse(JSON.stringify(p)); else this.newProduct = { id: null, sku: 'SKU-', name: '', price: 0 }; this.showProductModal = true; },
                 async saveProduct() {
-                    if (!this.newProduct.sku || !this.newProduct.name) return alert('????ß’?????????');
+                    if (!this.newProduct.sku || !this.newProduct.name) return alert('????ÔøΩÔøΩ?????????');
                     const savedItem = { id: this.newProduct.id || Date.now(), ...this.newProduct };
                     const idx = this.products.findIndex(x => x.id === savedItem.id || x.sku === savedItem.sku);
                     if (idx !== -1) this.products[idx] = savedItem; else this.products.unshift(savedItem);
@@ -1494,7 +1494,7 @@ Footwear Export Co., Ltd.`;
                 },
                 async deleteProduct(id) {
                     const targetProduct = this.products.find(x => x.id === id); const sku = targetProduct ? targetProduct.sku : '';
-                    if (confirm('????????ßæ????')) {
+                    if (confirm('????????ÔøΩÔøΩ????')) {
                         this.products = this.products.filter(x => x.id !== id && (sku ? x.sku !== sku : true));
                         localStorage.setItem('shoecrm_local_products', JSON.stringify(this.products));
                         if (!this.isDemoMode) {
@@ -1515,7 +1515,7 @@ Footwear Export Co., Ltd.`;
 
 ${this.generatedEmailBody}`;
                     navigator.clipboard.writeText(fullText).then(() => {
-                        alert('???????????????????????????â«');
+                        alert('???????????????????????????ÔøΩÔøΩ');
                     });
                 }
             }
