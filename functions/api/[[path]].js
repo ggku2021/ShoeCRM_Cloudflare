@@ -163,11 +163,10 @@ export async function onRequest(context) {
                         image_url = 'https://www.sooxie.com' + image_url;
                     }
                 } else {
-                    image_url = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400';
+                    image_url = 'https://images.xiecdn.com/jinchen/texqjl2b6rdgrswajxh9fyqlmdrwdmko.jpg';
                 }
 
-                // 2. Price Extraction for 1688 and Sooxie
-                // Priority 1 - Match JS variable: var price="90.00"
+                // 2. Price Extraction: Priority 1 - Match JS variable: var price="90.00"
                 const jsPriceMatch = html.match(/var\s+price\s*=\s*["']([\d\.]+)["']/i);
                 if (jsPriceMatch) {
                     priceRMB = parseFloat(jsPriceMatch[1]);
@@ -189,7 +188,7 @@ export async function onRequest(context) {
                     }
                 }
 
-                // Priority 4 - class="price-num" / class="price" / class="value"
+                // Priority 4 - class="price-num" or class="price"
                 if (!priceRMB || priceRMB <= 0) {
                     const tagPriceMatch = html.match(/<(?:em|span|b|strong|div)[^>]*class=["'][^"'\s>]*(?:price|cost|num|value)[^"'\s>]*["'][^>]*>(?:[￥¥]\s*)?([\d\.]+)</i);
                     if (tagPriceMatch) {
