@@ -573,6 +573,7 @@
                         <button @click="fetchLiveExchangeRate" class="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded border border-blue-200 hover:bg-blue-100 flex items-center gap-1">
                             <i class="fa-solid fa-arrows-rotate" :class="{'fa-spin': isFetchingRate}"></i> 刷新实时美元汇率
                         </button>
+                        <span v-if="exchangeRateMsg" class="ml-2 text-xs text-gray-600">{{ exchangeRateMsg }}</span>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
                         <div><label class="block font-medium mb-1">工厂含税出厂价 (RMB/双)</label><input type="number" v-model.number="calcPricing.factoryCost" class="w-full border p-2 rounded"></div>
@@ -981,6 +982,36 @@
             </div>
         </div>
 
+        <!-- Quote Detail Modal -->
+        <div v-if="showQuoteDetailModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50" @click.self="showQuoteDetailModal = false">
+            <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl" @click.stop>
+                <div class="flex justify-between items-center mb-5 border-b pb-3">
+                    <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2"><i class="fa-solid fa-file-invoice-dollar text-teal-600"></i> 报价详情</h3>
+                    <button @click="showQuoteDetailModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div class="space-y-3 text-sm">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><span class="text-gray-500">客户/买家</span><p class="font-bold text-gray-800">{{ selectedQuoteDetail.company }}</p></div>
+                        <div><span class="text-gray-500">日期</span><p class="text-gray-700">{{ selectedQuoteDetail.date }}</p></div>
+                    </div>
+                    <div><span class="text-gray-500">SKU / 款号</span><p class="font-mono text-xs text-gray-800 bg-gray-50 p-2 rounded">{{ selectedQuoteDetail.sku }}</p></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><span class="text-gray-500">FOB单价/总金额</span><p class="font-bold text-emerald-600 text-lg">${{ selectedQuoteDetail.price }}</p></div>
+                        <div><span class="text-gray-500">预订数量</span><p class="text-gray-700">{{ selectedQuoteDetail.qty }} 双</p></div>
+                    </div>
+                    <div><span class="text-gray-500">快递/单号</span><p class="text-gray-700">{{ selectedQuoteDetail.express_no || '-' }}</p></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><span class="text-gray-500">状态</span><p><span class="bg-teal-50 text-teal-800 font-bold px-2 py-0.5 rounded border border-teal-200">{{ selectedQuoteDetail.status }}</span></p></div>
+                        <div><span class="text-gray-500">负责人</span><p class="text-gray-700">{{ selectedQuoteDetail.sales_rep || '-' }}</p></div>
+                    </div>
+                    <div v-if="selectedQuoteDetail.feedback"><span class="text-gray-500">反馈/备注</span><p class="text-gray-700 bg-gray-50 p-2 rounded mt-1">{{ selectedQuoteDetail.feedback }}</p></div>
+                </div>
+                <div class="flex justify-end mt-5 pt-3 border-t">
+                    <button @click="showQuoteDetailModal = false" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">关闭</button>
+                </div>
+            </div>
+        </div>
+
         <div v-if="showQuoteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-lg w-full p-6">
                 <h3 class="font-bold text-gray-800 mb-4">新增报价记录</h3>
@@ -1046,13 +1077,13 @@
                     loginForm: { username: '', password: '' }, loginError: '',
                     currentTab: 'lookbook',
                     searchQuery: '', filterLevel: '', filterStage: '',
-                    showCustomerModal: false, showFollowupModal: false, showQuoteModal: false, showProductModal: false,
+                    showCustomerModal: false, showFollowupModal: false, showQuoteModal: false, showProductModal: false, showQuoteDetailModal: false,
                     showMatchModal: false, showPIModal: false, showQRModal: false, previewProductModal: false, previewProductData: {},
                     showLookbookExportModal: false, showClientCartPIModal: false,
                     lookbookSelectedSKUs: [], clientCart: [], lookbookHidePrice: false, lookbookSearch: '', lookbookCategory: '',
-                    selectedQRProduct: {}, selectedMatchCustomer: {}, matchedProducts: [],
+                    selectedQuoteDetail: {}, selectedQRProduct: {}, selectedMatchCustomer: {}, matchedProducts: [],
                     exhibitionTargetCustomer: '', exhibitionSelectedSKU: '', exhibitionCart: [],
-                    isCameraActive: false, html5QrCode: null, selectedProductToAdd: null,
+                    isCameraActive: false, html5QrCode: null, selectedProductToAdd: null, exchangeRateMsg: '',
                     clientPIForm: { piNumber: 'REQ-' + Math.floor(100000 + Math.random() * 900000), date: new Date().toISOString().split('T')[0], company: '', contact: '' },
                     calcPricing: { factoryCost: 80, rebateRate: 13, vatRate: 13, exchangeRate: 7.20, portFee: 2.5, margin: 15 },
                     calcBox: { length: 60, width: 40, height: 35, pairsPerCarton: 12, totalCartons: 100 },
@@ -1222,7 +1253,6 @@ Footwear Export Co., Ltd.`;
                     this.isLoggedIn = true;
                     this.fetchAllData();
                 }
-                this.fetchLiveExchangeRate();
             },
             methods: {
                 updateScrapedUSD() {
@@ -1280,10 +1310,10 @@ Footwear Export Co., Ltd.`;
                         const data = await res.json();
                         if (data && data.rates && data.rates.CNY) {
                             this.calcPricing.exchangeRate = parseFloat(data.rates.CNY.toFixed(4));
-                            alert('成功获取最新美金实时汇率: 1 USD = ' + this.calcPricing.exchangeRate + ' CNY');
+                            this.exchangeRateMsg = '最新汇率: 1 USD = ' + this.calcPricing.exchangeRate + ' CNY';
                         }
                     } catch (e) {
-                        alert('无法获取实时汇率，使用当前默认汇率: ' + this.calcPricing.exchangeRate);
+                        this.exchangeRateMsg = '获取失败，当前汇率: ' + this.calcPricing.exchangeRate;
                     } finally {
                         this.isFetchingRate = false;
                     }
@@ -1509,7 +1539,11 @@ Footwear Export Co., Ltd.`;
                     else { await this.apiFetch('/api/quotes', { method: 'POST', body: this.newQuote }); await this.fetchAllData(); }
                     this.showQuoteModal = false;
                 },
-                async deleteQuote(id) { if (confirm('确定删除吗？')) { this.quotes = this.quotes.filter(x => x.id !== id); if (!this.isDemoMode) await this.apiFetch('/api/quotes/' + id, { method: 'DELETE' }); } },
+                viewQuoteDetail(q) {
+            this.selectedQuoteDetail = q;
+            this.showQuoteDetailModal = true;
+        },
+        async deleteQuote(id) { if (confirm('确定删除吗？')) { this.quotes = this.quotes.filter(x => x.id !== id); if (!this.isDemoMode) await this.apiFetch('/api/quotes/' + id, { method: 'DELETE' }); } },
                 openProductModal(p = null) { if (p) this.newProduct = JSON.parse(JSON.stringify(p)); else this.newProduct = { id: null, sku: 'SKU-', name: '', price: 0 }; this.showProductModal = true; },
                 async saveProduct() {
                     if (!this.newProduct.sku || !this.newProduct.name) return alert('请填写款号和名称！');
