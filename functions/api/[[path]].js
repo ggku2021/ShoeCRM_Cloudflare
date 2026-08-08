@@ -62,7 +62,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 1. 1688 / 搜鞋网 (sooxie.com) 高精度主图与商品一键抓取接口
+        // 1. 1688 / 搜鞋网 (sooxie.com) 高精度主图与价格抓取接口 (免登录)
         if (path === '/api/scrape-product') {
             let targetUrl = '';
             if (method === 'POST') {
@@ -92,45 +92,39 @@ export async function onRequest(context) {
                 let price = 0;
                 let sku = '';
 
+                // Extract SKU / Item ID
                 if (targetUrl.includes('1688.com')) {
                     const match = targetUrl.match(/offer\/(\d+)\.html/);
                     sku = match ? '1688-' + match[1] : '1688-' + Math.floor(100000 + Math.random() * 900000);
                 } else if (targetUrl.includes('sooxie.com')) {
-                    const match = targetUrl.match(/(\d+)\.html/) || targetUrl.match(/id=(\d+)/) || targetUrl.match(/detail\/(\d+)/);
+                    const match = targetUrl.match(/detail\/(\d+)/) || targetUrl.match(/(\d+)\.html/) || targetUrl.match(/id=(\d+)/);
                     sku = match ? 'SOOXIE-' + match[1] : 'SOOXIE-' + Math.floor(100000 + Math.random() * 900000);
                 } else {
                     sku = 'SKU-' + Math.floor(100000 + Math.random() * 900000);
                 }
 
+                // Extract Title
                 const titleMatch = html.match(/<title>(.*?)<\/title>/i) || html.match(/meta property="og:title" content="(.*?)"/i);
                 if (titleMatch) {
                     name = titleMatch[1].replace(/-1688\.com|-阿里巴巴|-搜鞋网|sooxie\.com/gi, '').trim();
                 }
 
+                // Extract Main Image (Filter Bad Platform Banners/Sprites)
                 const badKeywords = ['-tps-', '60000000', 'sprite', 'logo', 'banner', 'header', 'icon', 'avatar', 'watermark'];
 
-                const cbuMatches = html.match(/https?:\/\/cbu01\.alicdn\.com\/img\/ibank\/[^\s"'<>]+?\.(?:jpg|jpeg|webp|png)/gi) || [];
-                for (const img of cbuMatches) {
-                    if (!badKeywords.some(b => img.includes(b))) {
+                // Sooxie / Xiecdn Image
+                const sooxieMatches = html.match(/https?:\/\/(?:images\.xiecdn\.com|img\.sooxie\.com|www\.sooxie\.com\/upload)[^\s"'<>]+?\.(?:jpg|jpeg|webp|png)/gi) || [];
+                for (const img of sooxieMatches) {
+                    if (!badKeywords.some(b => img.includes(b)) && img.length > 25) {
                         image_url = img;
                         break;
                     }
                 }
 
+                // 1688 cbu01 CDN main images
                 if (!image_url) {
-                    const jsonMatches = html.match(/"(?:imageUrl|offerImage|mainImage|fullPathImageURI)":"(https?:\/\/[^"]+)"/gi) || [];
-                    for (const m of jsonMatches) {
-                        const cleanUrl = m.split('":"')[1].replace(/"/g, '').replace(/\\\//g, '/');
-                        if (!badKeywords.some(b => cleanUrl.includes(b))) {
-                            image_url = cleanUrl;
-                            break;
-                        }
-                    }
-                }
-
-                if (!image_url) {
-                    const sooxieMatches = html.match(/https?:\/\/(?:images\.xiecdn\.com|www\.sooxie\.com\/upload)[^\s"'<>]+?\.(?:jpg|jpeg|webp|png)/gi) || [];
-                    for (const img of sooxieMatches) {
+                    const cbuMatches = html.match(/https?:\/\/cbu01\.alicdn\.com\/img\/ibank\/[^\s"'<>]+?\.(?:jpg|jpeg|webp|png)/gi) || [];
+                    for (const img of cbuMatches) {
                         if (!badKeywords.some(b => img.includes(b))) {
                             image_url = img;
                             break;
@@ -138,6 +132,19 @@ export async function onRequest(context) {
                     }
                 }
 
+                // JSON imageUrl / offerImage / mainImage
+                if (!image_url) {
+                    const jsonMatches = html.match(/"(?:imageUrl|offerImage|mainImage|fullPathImageURI|pic_url)":"(https?:\/\/[^"]+)"/gi) || [];
+                    for (const m of jsonMatches) {
+                        const cleanUrl = m.split('":"')[1].replace(/"/g, '').replace(/\\\//g, '/');
+                        if (!badKeywords.some(b => cleanUrl.includes(b)) && cleanUrl.length > 20) {
+                            image_url = cleanUrl;
+                            break;
+                        }
+                    }
+                }
+
+                // Fallback imgextra .jpg
                 if (!image_url) {
                     const extraMatches = html.match(/https?:\/\/img\.alicdn\.com\/imgextra\/[^\s"'<>]+?\.(?:jpg|jpeg|webp)/gi) || [];
                     for (const img of extraMatches) {
@@ -148,10 +155,11 @@ export async function onRequest(context) {
                     }
                 }
 
-                const priceMatch = html.match(/"price":"?([\d\.]+)"?/i) || 
-                                   html.match(/meta property="og:product:price" content="(.*?)"/i) ||
-                                   html.match(/￥\s*([\d\.]+)/) ||
-                                   html.match(/¥\s*([\d\.]+)/);
+                // Extract Price (Sooxie & 1688 price patterns)
+                const priceMatch = html.match(/(?:批价|拿货价|售价|价格|price)[^\d]{0,20}(?:[￥¥]\s*)?([\d\.]+)/i) ||
+                                   html.match(/[￥¥]\s*([\d\.]+)/) ||
+                                   html.match(/"price":"?([\d\.]+)"?/i) ||
+                                   html.match(/meta property="og:product:price" content="(.*?)"/i);
                 if (priceMatch) {
                     price = parseFloat(priceMatch[1]) || 0;
                 }
@@ -268,7 +276,7 @@ export async function onRequest(context) {
                 ).bind(
                     b.company || '', b.date || new Date().toISOString().split('T')[0],
                     b.channel || 'WhatsApp', b.notes || '', b.interest || '中',
-                    b.next_date || '', b.action || '', b.status || '进行中', b.sales_rep || '销售员'
+                    b.next_date || '', b.action || '', b.status || '进行中', b.sales_rep || '销售员', b.notes || ''
                 ).run();
                 return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
             }
@@ -310,7 +318,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 7. Products Endpoint - Resilient UPDATE & INSERT
+        // 7. Products Endpoint
         if (path === '/api/products') {
             if (method === 'GET') {
                 try {
@@ -324,10 +332,8 @@ export async function onRequest(context) {
             if (method === 'POST') {
                 const b = await getJsonBody();
 
-                // 尝试建增 image_url 列
                 try { await env.DB.prepare('ALTER TABLE products ADD COLUMN image_url TEXT').run(); } catch(colErr) {}
 
-                // 解析 ID：如果 ID 存在（数字或字符串），则进行 UPDATE 编辑；否则 INSERT
                 const numId = b.id ? Number(b.id) : 0;
                 const isUpdate = numId > 0 && numId < 10000000000;
 
@@ -384,7 +390,6 @@ export async function onRequest(context) {
             }
         }
 
-        // 支持通过 ID 或 SKU 删除商品
         if (path.startsWith('/api/products/')) {
             const param = path.split('/')[3];
             if (method === 'DELETE') {
