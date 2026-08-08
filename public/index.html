@@ -1013,10 +1013,17 @@
         </div>
 
         <div v-if="showQuoteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-xl max-w-lg w-full p-6">
+            <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
                 <h3 class="font-bold text-gray-800 mb-4">新增报价记录</h3>
-                <input type="text" v-model="newQuote.sku" placeholder="SKU" class="w-full border p-2 rounded text-xs mb-3">
-                <div class="flex justify-end gap-2"><button @click="showQuoteModal = false" class="px-4 py-2 border rounded">取消</button><button @click="saveQuote()" class="px-4 py-2 bg-blue-600 text-white rounded">保存</button></div>
+                <div class="space-y-3">
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">客户 / 买家</label><input type="text" v-model="newQuote.company" placeholder="客户公司名称" class="w-full border p-2 rounded text-xs"></div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">SKU / 款号</label><input type="text" v-model="newQuote.sku" placeholder="SKU" class="w-full border p-2 rounded text-xs"></div>
+                    <div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-gray-600 mb-1">FOB单价 ($)</label><input type="number" step="0.01" v-model.number="newQuote.price" placeholder="0" class="w-full border p-2 rounded text-xs"></div><div><label class="block text-xs font-semibold text-gray-600 mb-1">预订数量 (双)</label><input type="number" v-model.number="newQuote.qty" placeholder="0" class="w-full border p-2 rounded text-xs"></div></div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">快递 / 单号</label><input type="text" v-model="newQuote.express_no" placeholder="快递公司 + 运单号" class="w-full border p-2 rounded text-xs"></div>
+                    <div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-gray-600 mb-1">状态</label><select v-model="newQuote.status" class="w-full border p-2 rounded text-xs"><option value="已发送报价">已发送报价</option><option value="样品已发送">样品已发送</option><option value="样品已签收">样品已签收</option><option value="已成交">已成交</option><option value="已关闭">已关闭</option></select></div><div><label class="block text-xs font-semibold text-gray-600 mb-1">负责人</label><input type="text" v-model="newQuote.sales_rep" class="w-full border p-2 rounded text-xs"></div></div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">反馈 / 备注</label><textarea v-model="newQuote.feedback" rows="2" placeholder="买家反馈、跟进备注等" class="w-full border p-2 rounded text-xs"></textarea></div>
+                </div>
+                <div class="flex justify-end gap-2 mt-5 pt-3 border-t"><button @click="showQuoteModal = false" class="px-4 py-2 border rounded text-sm">取消</button><button @click="saveQuote()" class="px-4 py-2 bg-blue-600 text-white rounded text-sm">保存</button></div>
             </div>
         </div>
 
@@ -1533,7 +1540,7 @@ Footwear Export Co., Ltd.`;
                     this.showFollowupModal = false;
                 },
                 async deleteFollowup(id) { if (confirm('确定删除吗？')) { this.followups = this.followups.filter(x => x.id !== id); if (!this.isDemoMode) await this.apiFetch('/api/followups/' + id, { method: 'DELETE' }); } },
-                openQuoteModal() { this.newQuote = { company: this.customers[0] ? this.customers[0].company : '', sku: '', price: 0, sales_rep: this.currentUser.name, date: new Date().toISOString().split('T')[0] }; this.showQuoteModal = true; },
+                openQuoteModal() { this.newQuote = { company: this.customers[0] ? this.customers[0].company : '', sku: '', price: 0, qty: 0, express_no: '', status: '已发送报价', sales_rep: this.currentUser.name || '', feedback: '', date: new Date().toISOString().split('T')[0] }; this.showQuoteModal = true; },
                 async saveQuote() {
                     if (this.isDemoMode) this.quotes.unshift({ id: Date.now(), ...this.newQuote });
                     else { await this.apiFetch('/api/quotes', { method: 'POST', body: this.newQuote }); await this.fetchAllData(); }
