@@ -62,7 +62,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 1. 1688 / 搜鞋网 (sooxie.com) 高精度主图与价格抓取接口 (免登录)
+        // 1. 1688 / 搜鞋网 (sooxie.com) 智能主图与价格抓取接口 (免登录)
         if (path === '/api/scrape-product') {
             let targetUrl = '';
             if (method === 'POST') {
@@ -89,7 +89,7 @@ export async function onRequest(context) {
 
                 let name = '';
                 let image_url = '';
-                let price = 0;
+                let priceRMB = 0;
                 let sku = '';
 
                 // Extract SKU / Item ID
@@ -109,20 +109,33 @@ export async function onRequest(context) {
                     name = titleMatch[1].replace(/-1688\.com|-阿里巴巴|-搜鞋网|sooxie\.com/gi, '').trim();
                 }
 
-                const badKeywords = ['-tps-', '60000000', 'sprite', 'logo', 'banner', 'header', 'icon', 'avatar', 'watermark'];
+                const badKeywords = ['-tps-', '60000000', 'sprite', 'logo', 'banner', 'header', 'icon', 'avatar', 'watermark', 'blank.gif', 'pixel.png'];
 
-                // 1. Sooxie / Xiecdn Image (support // or https:// or http://)
-                const sooxieMatches = html.match(/((?:https?:)?\/\/(?:images\.xiecdn\.com|img\.sooxie\.com|www\.sooxie\.com\/upload)[^\s"'<>]+?\.(?:jpg|jpeg|webp|png))/gi) || [];
-                for (const img of sooxieMatches) {
-                    if (!badKeywords.some(b => img.includes(b)) && img.length > 15) {
-                        image_url = img;
+                // 1a. Check Lazy Loading Attributes (data-original, data-src, data-lazy, data-pic)
+                const lazyMatches = html.match(/data-(?:original|src|lazy|pic)=["']([^"'\s>]+)["']/gi) || [];
+                for (const m of lazyMatches) {
+                    const cleanUrl = m.split(/=["']/)[1].replace(/["']/g, '');
+                    if (!badKeywords.some(b => cleanUrl.includes(b)) && cleanUrl.length > 15) {
+                        image_url = cleanUrl;
                         break;
                     }
                 }
 
-                // 2. 1688 cbu01 CDN main images
+                // 1b. Check img src / a href (case-insensitive for .jpg, .JPG, .png, .PNG, .webp)
                 if (!image_url) {
-                    const cbuMatches = html.match(/((?:https?:)?\/\/cbu01\.alicdn\.com\/img\/ibank\/[^\s"'<>]+?\.(?:jpg|jpeg|webp|png))/gi) || [];
+                    const srcMatches = html.match(/(?:src|href)=["']([^"'\s>]+?\.(?:jpg|jpeg|webp|png)(?:\?[^"'\s>]*)?)["']/gi) || [];
+                    for (const m of srcMatches) {
+                        const cleanUrl = m.split(/=["']/)[1].replace(/["']/g, '');
+                        if (!badKeywords.some(b => cleanUrl.includes(b)) && cleanUrl.length > 15) {
+                            image_url = cleanUrl;
+                            break;
+                        }
+                    }
+                }
+
+                // 1c. Check 1688 cbu01 / alicdn CDN main images
+                if (!image_url) {
+                    const cbuMatches = html.match(/((?:https?:)?\/\/(?:cbu01|img)\.alicdn\.com\/[^\s"'<>]+?\.(?:jpg|jpeg|webp|png))/gi) || [];
                     for (const img of cbuMatches) {
                         if (!badKeywords.some(b => img.includes(b))) {
                             image_url = img;
@@ -131,7 +144,7 @@ export async function onRequest(context) {
                     }
                 }
 
-                // 3. JSON imageUrl / offerImage / mainImage / pic_url
+                // 1d. Check JSON imageUrl / offerImage / mainImage / pic_url
                 if (!image_url) {
                     const jsonMatches = html.match(/"(?:imageUrl|offerImage|mainImage|fullPathImageURI|pic_url)":"([^"]+)"/gi) || [];
                     for (const m of jsonMatches) {
@@ -143,44 +156,64 @@ export async function onRequest(context) {
                     }
                 }
 
-                // 4. Fallback imgextra .jpg
-                if (!image_url) {
-                    const extraMatches = html.match(/((?:https?:)?\/\/img\.alicdn\.com\/imgextra\/[^\s"'<>]+?\.(?:jpg|jpeg|webp))/gi) || [];
-                    for (const img of extraMatches) {
-                        if (!badKeywords.some(b => img.includes(b))) {
-                            image_url = img;
-                            break;
-                        }
-                    }
-                }
-
-                // STRICT HTTPS NORMALIZATION TO PREVENT MIXED CONTENT BLOCKING!
+                // STRICT HTTPS NORMALIZATION & FALLBACK
                 if (image_url) {
                     if (image_url.startsWith('//')) {
                         image_url = 'https:' + image_url;
                     } else if (image_url.startsWith('http://')) {
                         image_url = image_url.replace('http://', 'https://');
+                    } else if (image_url.startsWith('/')) {
+                        image_url = 'https://www.sooxie.com' + image_url;
+                    }
+                } else {
+                    image_url = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400';
+                }
+
+                // Smart Price Extraction (Avoid matching title model numbers like A115 or 39-45)
+                // 2a. Match class="price-num" or class="price" tag content
+                const tagPriceMatch = html.match(/<(?:em|span|b|strong|div)[^>]*class=["'][^"'\s>]*(?:price|cost|num)[^"'\s>]*["'][^>]*>(?:[￥¥]\s*)?([\d\.]+)</i);
+                if (tagPriceMatch) {
+                    priceRMB = parseFloat(tagPriceMatch[1]);
+                }
+
+                // 2b. Match 拿货价 / 批价 / 批发价 / 出厂价
+                if (!priceRMB || priceRMB <= 0) {
+                    const labelPriceMatch = html.match(/(?:拿货价|批价|批发价|出厂价|单价)[^\d]{0,10}(?:[￥¥]\s*)?([\d\.]+)/i);
+                    if (labelPriceMatch) {
+                        priceRMB = parseFloat(labelPriceMatch[1]);
                     }
                 }
 
-                // Extract Price
-                const priceMatch = html.match(/(?:批价|拿货价|售价|价格|price|P|¥|￥)[^\d]{0,20}([\d\.]+)/i) ||
-                                   html.match(/[￥¥]\s*([\d\.]+)/) ||
-                                   html.match(/"price":"?([\d\.]+)"?/i) ||
-                                   html.match(/meta property="og:product:price" content="(.*?)"/i);
-                if (priceMatch) {
-                    price = parseFloat(priceMatch[1]) || 0;
+                // 2c. Match P 90 元 pattern in title/body
+                if (!priceRMB || priceRMB <= 0) {
+                    const pPriceMatch = html.match(/P\s*(\d+(?:\.\d+)?)\s*元/i);
+                    if (pPriceMatch) {
+                        priceRMB = parseFloat(pPriceMatch[1]);
+                    }
                 }
+
+                // 2d. Fallback regex for ￥90
+                if (!priceRMB || priceRMB <= 0) {
+                    const rmbMatch = html.match(/[￥¥]\s*([\d\.]+)/);
+                    if (rmbMatch) {
+                        priceRMB = parseFloat(rmbMatch[1]);
+                    }
+                }
+
+                const finalRMB = priceRMB || 90.0;
+                // Calculate FOB USD ($) based on 7.2 Exchange Rate: e.g. 90 RMB / 7.2 = $12.50
+                const finalUSD = parseFloat((finalRMB / 7.20).toFixed(2));
 
                 return new Response(JSON.stringify({
                     success: true,
                     product: {
                         sku: sku,
                         name: name || ('网络抓取鞋款 ' + sku),
-                        price: price || 15.0,
-                        image_url: image_url || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
+                        priceRMB: finalRMB,
+                        price: finalUSD,
+                        image_url: image_url,
                         category: name.includes('拖鞋') ? '凉拖鞋' : (name.includes('帆布') ? '休闲鞋' : '跑鞋'),
-                        upper_material: name.includes('飞织') ? '透气飞织' : (name.includes('皮') ? '真皮/PU' : '网布'),
+                        upper_material: name.includes('飞织') ? '透气飞织' : (name.includes('皮') ? '头层牛皮/PU' : '网布'),
                         sole_material: 'MD+橡胶底',
                         moq: 1000,
                         target_market: '通用外贸',
@@ -284,7 +317,7 @@ export async function onRequest(context) {
                 ).bind(
                     b.company || '', b.date || new Date().toISOString().split('T')[0],
                     b.channel || 'WhatsApp', b.notes || '', b.interest || '中',
-                    b.next_date || '', b.action || '', b.status || '进行中', b.sales_rep || '销售员'
+                    b.next_date || '', b.action || '', b.status || '进行中', b.sales_rep || '销售员', b.notes || ''
                 ).run();
                 return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
             }
