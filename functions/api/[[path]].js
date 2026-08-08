@@ -163,7 +163,7 @@ export async function onRequest(context) {
                         image_url = 'https://www.sooxie.com' + image_url;
                     }
                 } else {
-                    image_url = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400';
+                    image_url = 'https://images.xiecdn.com/jinchen/texqjl2b6rdgrswajxh9fyqlmdrwdmko.jpg';
                 }
 
                 // 2. Price Extraction: Priority 1 - Match JS variable: var price="90.00"
@@ -204,8 +204,16 @@ export async function onRequest(context) {
                     }
                 }
 
+                // Priority 6 - Match ￥ 90.00
+                if (!priceRMB || priceRMB <= 0) {
+                    const rmbMatch = html.match(/[￥¥]\s*([\d\.]+)/);
+                    if (rmbMatch) {
+                        priceRMB = parseFloat(rmbMatch[1]);
+                    }
+                }
+
                 const finalRMB = priceRMB || 90.0;
-                // Calculate FOB USD ($) based on 7.2 Exchange Rate
+                // Calculate FOB USD ($) based on 7.2 Exchange Rate: e.g. 90 RMB / 7.2 = $12.50
                 const finalUSD = parseFloat((finalRMB / 7.20).toFixed(2));
 
                 return new Response(JSON.stringify({
