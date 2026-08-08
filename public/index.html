@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鞋业外贸 CRM 系统 v6.0 - 修复全功能版</title>
+    <title>鞋业外贸 CRM 系统 v6.0 - 搜鞋网主图与汇率修复版</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -141,7 +141,7 @@
             </div>
         </aside>
 
-        <!-- 4. 移动端 Header (登录状态下显示) -->
+        <!-- 4. 移动端 Header -->
         <header v-if="isLoggedIn && !isPublicCatalogMode" class="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-30 shadow">
             <div class="flex items-center space-x-2">
                 <i class="fa-solid fa-shoe-prints text-xl text-blue-400"></i>
@@ -161,7 +161,7 @@
             </div>
         </header>
 
-        <!-- 5. 主内容区 (包含全部 8 大选项卡模块) -->
+        <!-- 5. 主内容区 -->
         <main v-if="isLoggedIn || isPublicCatalogMode" :class="['flex-1 p-4 md:p-8 overflow-y-auto pb-24 md:pb-8', isPublicCatalogMode ? 'pt-24 md:pt-24 max-w-7xl mx-auto w-full' : '']">
             
             <!-- 模块 1. 控制台看板 -->
@@ -324,7 +324,7 @@
                 </div>
             </div>
 
-            <!-- 模块 3. 客户管理完整卡片模块 -->
+            <!-- 模块 3. 客户管理卡片模块 -->
             <div v-if="!isPublicCatalogMode && currentTab === 'customers'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -431,7 +431,7 @@
                     <div class="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
                         <div>
                             <h3 class="font-bold text-gray-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-basket-shopping text-blue-500"></i> 当前客户选样清单 ({{ exhibitionCart.length }}件)</h3>
-                            <div class="space-y-3">
+                            <div class="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                                 <div v-for="(item, idx) in exhibitionCart" :key="idx" class="flex items-center justify-between p-3 border rounded-lg bg-slate-50">
                                     <div class="flex items-center gap-3">
                                         <img :src="item.image_url" class="w-12 h-12 object-cover rounded">
@@ -558,17 +558,20 @@
                 </div>
             </div>
 
-            <!-- 模块 8. 外贸工具与工具箱 -->
+            <!-- 模块 8. 外贸工具与工具箱 (包含 FOB测算器、CBM计算器、鞋码表、开发信模板) -->
             <div v-if="!isPublicCatalogMode && currentTab === 'tools'" class="space-y-6">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">外贸工具箱与报价核算</h2>
                     <p class="text-sm text-gray-500">外贸出口报价测算、CBM集装箱配载、鞋码转换与开发信模板</p>
                 </div>
 
+                <!-- 8a. FOB报价与退税测算器 -->
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
                     <div class="flex justify-between items-center border-b pb-2">
                         <h3 class="font-bold text-gray-800 text-base flex items-center gap-2"><i class="fa-solid fa-calculator text-emerald-600"></i> 外贸出口报价与退税测算器 (FOB Price Calculator)</h3>
-                        <button @click="fetchLiveExchangeRate" class="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded border border-blue-200 hover:bg-blue-100 flex items-center gap-1"><i class="fa-solid fa-arrows-rotate" :class="{'fa-spin': isFetchingRate}"></i> 刷新实时美元汇率</button>
+                        <button @click="fetchLiveExchangeRate" class="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded border border-blue-200 hover:bg-blue-100 flex items-center gap-1">
+                            <i class="fa-solid fa-arrows-rotate" :class="{'fa-spin': isFetchingRate}"></i> 刷新实时美元汇率
+                        </button>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
                         <div><label class="block font-medium mb-1">工厂含税出厂价 (RMB/双)</label><input type="number" v-model.number="calcPricing.factoryCost" class="w-full border p-2 rounded"></div>
@@ -584,6 +587,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- 8b. CBM计算器 -->
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
                         <h3 class="font-bold text-gray-800 text-base border-b pb-2 flex items-center gap-2"><i class="fa-solid fa-boxes-packing text-blue-600"></i> 集装箱装箱量（CBM）计算器</h3>
                         <div class="grid grid-cols-3 gap-2 text-xs">
@@ -597,6 +601,7 @@
                         </div>
                     </div>
 
+                    <!-- 8c. 鞋码换算表 -->
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
                         <h3 class="font-bold text-gray-800 text-base border-b pb-2 flex items-center gap-2"><i class="fa-solid fa-ruler-horizontal text-emerald-600"></i> 国际通用鞋码换算表</h3>
                         <table class="w-full text-center text-xs border border-gray-200">
@@ -609,6 +614,53 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- 8d. 开发信与跟进模板生成器 (完整4套模板) -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-4">
+                    <h3 class="font-bold text-gray-800 text-base border-b pb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-envelope-open-text text-purple-600"></i> 外贸开发与客情跟进模板生成器
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">选择模板类型</label>
+                            <select v-model="selectedTemplateKey" class="w-full border p-2 rounded bg-white text-sm">
+                                <option value="new_season">1. 展会/季末新品推介 (New Arrival)</option>
+                                <option value="quote_followup">2. 报价后催复/跟踪 (Quote Follow-up)</option>
+                                <option value="sample_sent">3. 样品已寄出通知 (Sample Dispatch)</option>
+                                <option value="reorder">4. 老客户复购跟进 (Reorder Notice)</option>
+                            </select>
+
+                            <label class="block text-xs font-semibold text-gray-600 mt-3 mb-1">选择目标客户（填充变量）</label>
+                            <select v-model="templateCustomer" class="w-full border p-2 rounded bg-white text-sm">
+                                <option value="">-- 选择客户 --</option>
+                                <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }} ({{ c.contact }})</option>
+                            </select>
+
+                            <div class="mt-4 p-3 bg-gray-50 rounded border text-xs text-gray-500">
+                                <p class="font-bold mb-1">💡 快捷操作：</p>
+                                <p>点击“复制英文邮件”，直接粘贴到 Outlook/Gmail 或客户的 WhatsApp 对话框中发送。</p>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2 space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">邮件主题 (Subject)</label>
+                                <input type="text" :value="generatedEmailSubject" readonly class="w-full bg-gray-50 border p-2 rounded font-mono text-xs text-slate-800">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">邮件正文 (Body)</label>
+                                <textarea :value="generatedEmailBody" readonly class="w-full bg-gray-50 border p-3 rounded font-mono text-xs text-slate-800 h-48"></textarea>
+                            </div>
+                            <div class="flex justify-end gap-2">
+                                <button @click="copyTemplateText" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-xs font-medium">
+                                    <i class="fa-solid fa-copy me-1"></i> 复制邮件内容
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
         </main>
@@ -624,7 +676,7 @@
                     <div>
                         <label class="block font-bold text-slate-700 mb-1.5">商品链接 URL (1688 或 搜鞋网 sooxie.com)</label>
                         <div class="flex gap-2">
-                            <input type="text" v-model="scraperUrl" placeholder="https://nuowang.sooxie.com/detail/2404845" class="flex-1 border p-2.5 rounded-lg text-xs focus:ring-2 focus:ring-orange-500">
+                            <input type="text" v-model="scraperUrl" placeholder="例如: https://jinchen.sooxie.com/detail/2487248" class="flex-1 border p-2.5 rounded-lg text-xs focus:ring-2 focus:ring-orange-500">
                             <button @click="runScraper" :disabled="isScraping" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-lg font-bold flex items-center gap-1.5 whitespace-nowrap shadow"><i class="fa-solid fa-circle-notch fa-spin" v-if="isScraping"></i><span>{{ isScraping ? '抓取中...' : '开始抓取' }}</span></button>
                         </div>
                     </div>
@@ -660,7 +712,7 @@
             </div>
         </div>
 
-        <!-- 8. 完整版外贸 PI 导出弹窗 (生成外贸PI) -->
+        <!-- 8. 完整版外贸 PI 导出弹窗 -->
         <div v-if="showPIModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
                 <div class="flex flex-wrap justify-between items-center border-b pb-3 mb-4 no-print gap-2">
@@ -678,7 +730,6 @@
                     </div>
                 </div>
 
-                <!-- Printable Area -->
                 <div id="pi-printable" class="p-6 bg-white border border-gray-200 rounded text-gray-800 text-sm space-y-4">
                     <div class="flex justify-between items-start border-b-2 border-slate-800 pb-4">
                         <div>
@@ -693,7 +744,6 @@
                         </div>
                     </div>
 
-                    <!-- Buyer & Terms Selection -->
                     <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded">
                         <div>
                             <p class="font-bold text-xs uppercase text-gray-500 mb-1">BUYER (CUSTOMER):</p>
@@ -711,90 +761,51 @@
                         </div>
                     </div>
 
-                    <!-- Add Existing Product Toolbar (No-print) -->
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-center justify-between gap-3 no-print">
-                        <span class="text-xs font-bold text-blue-800 flex items-center gap-1">
-                            <i class="fa-solid fa-boxes-packing"></i> 从鞋款库中检索添加：
-                        </span>
+                        <span class="text-xs font-bold text-blue-800 flex items-center gap-1"><i class="fa-solid fa-boxes-packing"></i> 从鞋款库中检索添加：</span>
                         <div class="flex-1 flex gap-2">
                             <select v-model="selectedProductToAdd" class="w-full border p-1.5 rounded text-xs bg-white">
                                 <option value="">-- 选择现有鞋款 --</option>
-                                <option v-for="p in products" :key="p.id" :value="p">
-                                    {{ p.sku }} | {{ p.name }} (${{ p.price }})
-                                </option>
+                                <option v-for="p in products" :key="p.id" :value="p">{{ p.sku }} | {{ p.name }} (${{ p.price }})</option>
                             </select>
-                            <button @click="addSelectedProductToPI" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium whitespace-nowrap">
-                                填入账单
-                            </button>
+                            <button @click="addSelectedProductToPI" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium whitespace-nowrap">填入账单</button>
                         </div>
                     </div>
 
-                    <!-- Items Table -->
                     <table class="w-full text-left border-collapse border border-gray-300 text-xs">
                         <thead>
                             <tr class="bg-gray-100">
-                                <th v-if="piForm.showImages" class="border border-gray-300 p-2 text-center w-16">Photo</th>
-                                <th class="border border-gray-300 p-2">Item / SKU</th>
-                                <th class="border border-gray-300 p-2">Description</th>
-                                <th class="border border-gray-300 p-2 text-right">Qty (Pairs)</th>
-                                <th class="border border-gray-300 p-2 text-right">Unit Price ($)</th>
-                                <th class="border border-gray-300 p-2 text-right">Total Amount ($)</th>
-                                <th class="border border-gray-300 p-2 text-center no-print w-10">操作</th>
+                                <th v-if="piForm.showImages" class="border p-2 text-center w-16">Photo</th>
+                                <th class="border p-2">Item / SKU</th>
+                                <th class="border p-2">Description</th>
+                                <th class="border p-2 text-right">Qty (Pairs)</th>
+                                <th class="border p-2 text-right">Unit Price ($)</th>
+                                <th class="border p-2 text-right">Total Amount ($)</th>
+                                <th class="border p-2 text-center no-print w-10">操作</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="(item, idx) in piForm.items" :key="idx">
-                                <td v-if="piForm.showImages" class="border border-gray-300 p-1 text-center">
-                                    <img :src="item.image_url || 'https://via.placeholder.com/60?text=No+Pic'" class="w-12 h-12 object-cover mx-auto rounded">
-                                </td>
-                                <td class="border border-gray-300 p-2">
-                                    <input type="text" v-model="item.sku" placeholder="SKU" class="w-full border-none focus:outline-none text-xs font-mono font-bold">
-                                </td>
-                                <td class="border border-gray-300 p-2">
-                                    <input type="text" v-model="item.desc" placeholder="Description" class="w-full border-none focus:outline-none text-xs">
-                                </td>
-                                <td class="border border-gray-300 p-2 text-right">
-                                    <input type="number" v-model.number="item.qty" class="w-20 text-right border-none focus:outline-none text-xs">
-                                </td>
-                                <td class="border border-gray-300 p-2 text-right">
-                                    <input type="number" step="0.1" v-model.number="item.price" class="w-20 text-right border-none focus:outline-none text-xs">
-                                </td>
-                                <td class="border border-gray-300 p-2 text-right font-bold">
-                                    ${{ (item.qty * item.price).toFixed(2) }}
-                                </td>
-                                <td class="border border-gray-300 p-1 text-center no-print">
-                                    <button @click="removePIItem(idx)" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
-                                </td>
+                                <td v-if="piForm.showImages" class="border p-1 text-center"><img :src="item.image_url || 'https://via.placeholder.com/60?text=No+Pic'" class="w-12 h-12 object-cover mx-auto rounded"></td>
+                                <td class="border p-2"><input type="text" v-model="item.sku" class="w-full border-none text-xs font-bold font-mono"></td>
+                                <td class="border p-2"><input type="text" v-model="item.desc" class="w-full border-none text-xs"></td>
+                                <td class="border p-2 text-right"><input type="number" v-model.number="item.qty" class="w-20 text-right border-none text-xs"></td>
+                                <td class="border p-2 text-right"><input type="number" step="0.1" v-model.number="item.price" class="w-20 text-right border-none text-xs"></td>
+                                <td class="border p-2 text-right font-bold">${{ (item.qty * item.price).toFixed(2) }}</td>
+                                <td class="border p-1 text-center no-print"><button @click="removePIItem(idx)" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td>
                             </tr>
                         </tbody>
                     </table>
 
-                    <div class="flex justify-between items-center no-print">
-                        <button @click="addPIItem" class="text-xs text-blue-600 hover:underline">+ 手动添加空行</button>
-                    </div>
+                    <div class="flex justify-between items-center no-print"><button @click="addPIItem" class="text-xs text-blue-600 hover:underline">+ 手动添加空行</button></div>
 
-                    <!-- Total & Bank Info -->
-                    <div class="flex justify-between pt-2 border-t">
-                        <div class="text-xs space-y-1 w-1/2">
+                    <div class="flex justify-between pt-2 border-t text-xs">
+                        <div class="space-y-1">
                             <p class="font-bold">BANK DETAILS FOR PAYMENT:</p>
-                            <p>Bank Name: HSBC Hong Kong</p>
-                            <p>Account Name: FOOTWEAR EXPORT LIMITED</p>
-                            <p>SWIFT Code: HSBCHKHHXXX</p>
+                            <p>Bank Name: HSBC Hong Kong | Account Name: FOOTWEAR EXPORT LIMITED</p>
                         </div>
                         <div class="text-right text-sm">
-                            <p class="text-gray-600">Total Quantity: <strong class="text-slate-900">{{ calculatePITotalQty }} Pairs</strong></p>
                             <p class="text-lg font-bold text-emerald-600">TOTAL AMOUNT: ${{ calculatePITotalAmount.toFixed(2) }} USD</p>
-                        </div>
-                    </div>
-
-                    <div class="pt-8 flex justify-between text-xs">
-                        <div>
-                            <p>Issued By: ___________________</p>
-                            <p class="text-gray-400 mt-1">Authorized Signature</p>
-                        </div>
-                        <div>
-                            <p>Confirmed By: ___________________</p>
-                            <p class="text-gray-400 mt-1">Buyer Signature</p>
                         </div>
                     </div>
                 </div>
@@ -872,6 +883,21 @@
                 }
             },
             computed: {
+                getLevelBadgeClass() {
+                    return (level) => {
+                        if (level === 'VIP') return 'bg-purple-100 text-purple-800';
+                        if (level === '重点客户') return 'bg-red-100 text-red-800';
+                        if (level === '潜在客户') return 'bg-blue-100 text-blue-800';
+                        return 'bg-gray-100 text-gray-800';
+                    };
+                },
+                getInterestBadgeClass() {
+                    return (interest) => {
+                        if (interest === '高') return 'bg-emerald-100 text-emerald-800';
+                        if (interest === '中') return 'bg-yellow-100 text-yellow-800';
+                        return 'bg-gray-100 text-gray-800';
+                    };
+                },
                 filteredCustomers() {
                     return this.customers.filter(c => {
                         const matchesSearch = !this.searchQuery || 
@@ -935,15 +961,75 @@
                 singleCBM() { return (this.calcBox.length * this.calcBox.width * this.calcBox.height) / 1000000; },
                 totalCBM() { return this.singleCBM * (this.calcBox.totalCartons || 0); },
                 totalPairs() { return (this.calcBox.pairsPerCarton || 0) * (this.calcBox.totalCartons || 0); },
+                generatedEmailSubject() {
+                    const c = this.customers.find(item => item.company === this.templateCustomer);
+                    const name = c ? c.contact : 'Partner';
+                    if (this.selectedTemplateKey === 'new_season') return `Latest Footwear Collection - ${name}`;
+                    if (this.selectedTemplateKey === 'quote_followup') return `Follow-up: Quotation & Samples for ${name}`;
+                    if (this.selectedTemplateKey === 'sample_sent') return `Tracking Details for Your Footwear Samples - ${name}`;
+                    if (this.selectedTemplateKey === 'reorder') return `Spring/Summer Footwear Order Planning for ${name}`;
+                    return 'Inquiry from Footwear Manufacturer';
+                },
                 generatedEmailBody() {
                     const c = this.customers.find(item => item.company === this.templateCustomer);
                     const name = c ? c.contact : 'Valued Client';
-                    return `Dear ${name},
+                    const company = c ? c.company : 'your company';
+                    
+                    if (this.selectedTemplateKey === 'new_season') {
+                        return `Dear ${name},
 
-We have recently launched our new season footwear catalog.
+Hope this email finds you well.
+
+We have recently launched our new season footwear catalog, featuring breathable flyknit running shoes and lightweight EVA slides tailored for ${c ? c.country : 'your market'}.
+
+Based on your preference for ${c ? (c.preferred_styles || 'quality footwear') : 'quality footwear'}, we think these new styles would be a great fit for ${company}.
+
+Would you like us to send over the digital catalog and quotation sheet?
 
 Best regards,
-${this.currentUser.name || 'Sales Manager'}`;
+${this.currentUser.name || 'Sales Manager'}
+Footwear Export Co., Ltd.`;
+                    }
+                    if (this.selectedTemplateKey === 'quote_followup') {
+                        return `Dear ${name},
+
+I am writing to follow up on the quotation and product specifications we sent over recently for ${company}.
+
+Have you had a chance to review the details? Please let us know if you need any adjustments on the target price or sample modifications.
+
+Looking forward to hearing from you soon.
+
+Best regards,
+${this.currentUser.name || 'Sales Manager'}
+Footwear Export Co., Ltd.`;
+                    }
+                    if (this.selectedTemplateKey === 'sample_sent') {
+                        return `Dear ${name},
+
+We are pleased to inform you that your requested footwear samples have been dispatched.
+
+Please find the tracking information below:
+- Express Carrier: DHL/FedEx
+- Estimated Arrival: 3-5 business days
+
+We look forward to receiving your feedback on the fit, material, and workmanship upon arrival.
+
+Best regards,
+${this.currentUser.name || 'Sales Manager'}
+Footwear Export Co., Ltd.`;
+                    }
+                    if (this.selectedTemplateKey === 'reorder') {
+                        return `Dear ${name},
+
+As we approach the upcoming peak production season, we'd like to check with ${company} regarding your inventory and reorder plans.
+
+To ensure timely delivery, we recommend locking in production slots and material lead times early. Please let us know if you need updated FCL/LCL pricing.
+
+Best regards,
+${this.currentUser.name || 'Sales Manager'}
+Footwear Export Co., Ltd.`;
+                    }
+                    return '';
                 }
             },
             mounted() {
@@ -956,18 +1042,23 @@ ${this.currentUser.name || 'Sales Manager'}`;
                     this.isLoggedIn = true;
                     this.fetchAllData();
                 }
+                this.fetchLiveExchangeRate();
             },
             methods: {
-                getLevelBadgeClass(level) {
-                    if (level === 'VIP') return 'bg-purple-100 text-purple-800';
-                    if (level === '重点客户') return 'bg-red-100 text-red-800';
-                    if (level === '潜在客户') return 'bg-blue-100 text-blue-800';
-                    return 'bg-gray-100 text-gray-800';
-                },
-                getInterestBadgeClass(interest) {
-                    if (interest === '高') return 'bg-emerald-100 text-emerald-800';
-                    if (interest === '中') return 'bg-yellow-100 text-yellow-800';
-                    return 'bg-gray-100 text-gray-800';
+                async fetchLiveExchangeRate() {
+                    this.isFetchingRate = true;
+                    try {
+                        const res = await fetch('https://open.er-api.com/v6/latest/USD');
+                        const data = await res.json();
+                        if (data && data.rates && data.rates.CNY) {
+                            this.calcPricing.exchangeRate = parseFloat(data.rates.CNY.toFixed(4));
+                            alert('成功获取最新美金实时汇率: 1 USD = ' + this.calcPricing.exchangeRate + ' CNY');
+                        }
+                    } catch (e) {
+                        alert('无法获取实时汇率，使用当前默认汇率: ' + this.calcPricing.exchangeRate);
+                    } finally {
+                        this.isFetchingRate = false;
+                    }
                 },
                 isOverdue(dateStr) {
                     if (!dateStr) return false;
@@ -1094,6 +1185,7 @@ ${this.currentUser.name || 'Sales Manager'}`;
                     this.isDemoMode = true; this.isLoggedIn = true; this.isPublicCatalogMode = false;
                     this.currentUser = { name: '演示用户', role: 'admin' };
                     this.loadDefaultPublicProducts();
+                    this.customers = [{ id: 1, company: 'Global Footwear Ltd', country: '美国', contact: 'John Smith', contact_info: 'john@globalfootwear.com', level: 'VIP', stage: '稳定复购' }];
                 },
                 logout() {
                     this.token = ''; this.isLoggedIn = false; this.isPublicCatalogMode = false;
@@ -1199,10 +1291,16 @@ ${this.currentUser.name || 'Sales Manager'}`;
                 showSmartMatch(c) { this.selectedMatchCustomer = c; this.showMatchModal = true; },
                 printPI() { window.print(); },
                 printClientPI() { window.print(); },
-                fetchLiveExchangeRate() {},
                 exportCSV() {},
                 toggleLang() {},
-                copyTemplateText() {}
+                copyTemplateText() {
+                    const fullText = `Subject: ${this.generatedEmailSubject}
+
+${this.generatedEmailBody}`;
+                    navigator.clipboard.writeText(fullText).then(() => {
+                        alert('已成功复制邮件主题和正文至剪贴板！');
+                    });
+                }
             }
         }).mount('#app');
     </script>

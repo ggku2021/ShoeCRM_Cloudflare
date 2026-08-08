@@ -109,21 +109,20 @@ export async function onRequest(context) {
                     name = titleMatch[1].replace(/-1688\.com|-阿里巴巴|-搜鞋网|sooxie\.com/gi, '').trim();
                 }
 
-                // Extract Main Image (Filter Bad Platform Banners/Sprites)
                 const badKeywords = ['-tps-', '60000000', 'sprite', 'logo', 'banner', 'header', 'icon', 'avatar', 'watermark'];
 
-                // Sooxie / Xiecdn Image
-                const sooxieMatches = html.match(/https?:\/\/(?:images\.xiecdn\.com|img\.sooxie\.com|www\.sooxie\.com\/upload)[^\s"'<>]+?\.(?:jpg|jpeg|webp|png)/gi) || [];
+                // 1. Sooxie / Xiecdn Image (support // or https:// or http://)
+                const sooxieMatches = html.match(/((?:https?:)?\/\/(?:images\.xiecdn\.com|img\.sooxie\.com|www\.sooxie\.com\/upload)[^\s"'<>]+?\.(?:jpg|jpeg|webp|png))/gi) || [];
                 for (const img of sooxieMatches) {
-                    if (!badKeywords.some(b => img.includes(b)) && img.length > 25) {
+                    if (!badKeywords.some(b => img.includes(b)) && img.length > 15) {
                         image_url = img;
                         break;
                     }
                 }
 
-                // 1688 cbu01 CDN main images
+                // 2. 1688 cbu01 CDN main images
                 if (!image_url) {
-                    const cbuMatches = html.match(/https?:\/\/cbu01\.alicdn\.com\/img\/ibank\/[^\s"'<>]+?\.(?:jpg|jpeg|webp|png)/gi) || [];
+                    const cbuMatches = html.match(/((?:https?:)?\/\/cbu01\.alicdn\.com\/img\/ibank\/[^\s"'<>]+?\.(?:jpg|jpeg|webp|png))/gi) || [];
                     for (const img of cbuMatches) {
                         if (!badKeywords.some(b => img.includes(b))) {
                             image_url = img;
@@ -132,21 +131,21 @@ export async function onRequest(context) {
                     }
                 }
 
-                // JSON imageUrl / offerImage / mainImage
+                // 3. JSON imageUrl / offerImage / mainImage / pic_url
                 if (!image_url) {
-                    const jsonMatches = html.match(/"(?:imageUrl|offerImage|mainImage|fullPathImageURI|pic_url)":"(https?:\/\/[^"]+)"/gi) || [];
+                    const jsonMatches = html.match(/"(?:imageUrl|offerImage|mainImage|fullPathImageURI|pic_url)":"([^"]+)"/gi) || [];
                     for (const m of jsonMatches) {
                         const cleanUrl = m.split('":"')[1].replace(/"/g, '').replace(/\\\//g, '/');
-                        if (!badKeywords.some(b => cleanUrl.includes(b)) && cleanUrl.length > 20) {
+                        if (!badKeywords.some(b => cleanUrl.includes(b)) && cleanUrl.length > 15) {
                             image_url = cleanUrl;
                             break;
                         }
                     }
                 }
 
-                // Fallback imgextra .jpg
+                // 4. Fallback imgextra .jpg
                 if (!image_url) {
-                    const extraMatches = html.match(/https?:\/\/img\.alicdn\.com\/imgextra\/[^\s"'<>]+?\.(?:jpg|jpeg|webp)/gi) || [];
+                    const extraMatches = html.match(/((?:https?:)?\/\/img\.alicdn\.com\/imgextra\/[^\s"'<>]+?\.(?:jpg|jpeg|webp))/gi) || [];
                     for (const img of extraMatches) {
                         if (!badKeywords.some(b => img.includes(b))) {
                             image_url = img;
@@ -155,8 +154,17 @@ export async function onRequest(context) {
                     }
                 }
 
-                // Extract Price (Sooxie & 1688 price patterns)
-                const priceMatch = html.match(/(?:批价|拿货价|售价|价格|price)[^\d]{0,20}(?:[￥¥]\s*)?([\d\.]+)/i) ||
+                // STRICT HTTPS NORMALIZATION TO PREVENT MIXED CONTENT BLOCKING!
+                if (image_url) {
+                    if (image_url.startsWith('//')) {
+                        image_url = 'https:' + image_url;
+                    } else if (image_url.startsWith('http://')) {
+                        image_url = image_url.replace('http://', 'https://');
+                    }
+                }
+
+                // Extract Price
+                const priceMatch = html.match(/(?:批价|拿货价|售价|价格|price|P|¥|￥)[^\d]{0,20}([\d\.]+)/i) ||
                                    html.match(/[￥¥]\s*([\d\.]+)/) ||
                                    html.match(/"price":"?([\d\.]+)"?/i) ||
                                    html.match(/meta property="og:product:price" content="(.*?)"/i);
@@ -276,7 +284,7 @@ export async function onRequest(context) {
                 ).bind(
                     b.company || '', b.date || new Date().toISOString().split('T')[0],
                     b.channel || 'WhatsApp', b.notes || '', b.interest || '中',
-                    b.next_date || '', b.action || '', b.status || '进行中', b.sales_rep || '销售员', b.notes || ''
+                    b.next_date || '', b.action || '', b.status || '进行中', b.sales_rep || '销售员'
                 ).run();
                 return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
             }
