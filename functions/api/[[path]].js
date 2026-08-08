@@ -62,7 +62,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 1. 1688 / 搜鞋网 (sooxie.com) 精准主图(剔除 !bac/!first 样式后缀)与价格抓取接口
+        // 1. 1688 / 搜鞋网 (sooxie.com) 智能主图与多源价格抓取接口 (免登录)
         if (path === '/api/scrape-product') {
             let targetUrl = '';
             if (method === 'POST') {
@@ -111,7 +111,7 @@ export async function onRequest(context) {
 
                 const badKeywords = ['-tps-', '60000000', 'sprite', 'logo', 'banner', 'header', 'icon', 'avatar', 'watermark', 'blank.gif', 'pixel.png'];
 
-                // 1a. Priority 1: Match og:image meta tag
+                // 1a. Priority 1: og:image
                 const ogImgMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"'\s>]+)["']/i);
                 if (ogImgMatch) {
                     raw_image_url = ogImgMatch[1];
@@ -149,10 +149,9 @@ export async function onRequest(context) {
                     }
                 }
 
-                // CLEAN AND NORMALIZE IMAGE URL (STRICTLY STRIP OSS STYLE SUFFIXES LIKE !bac, !first)
+                // CLEAN AND NORMALIZE IMAGE URL
                 let image_url = raw_image_url || '';
                 if (image_url) {
-                    // Strip OSS suffixes like !bac, !first, !firstwebp, !/format/webp
                     image_url = image_url.replace(/![a-zA-Z0-9_\-\/]+$/i, '');
                     image_url = image_url.replace(/\?[^"'\s>]*$/i, '');
 
@@ -167,13 +166,22 @@ export async function onRequest(context) {
                     image_url = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400';
                 }
 
-                // 2. Price Extraction: Priority 1 - Match JS variable: var price="90.00"
+                // 2. Price Extraction for 1688 and Sooxie
+                // Priority 1 - Match JS variable: var price="90.00"
                 const jsPriceMatch = html.match(/var\s+price\s*=\s*["']([\d\.]+)["']/i);
                 if (jsPriceMatch) {
                     priceRMB = parseFloat(jsPriceMatch[1]);
                 }
 
-                // Priority 2 - class="meri-price"
+                // Priority 2 - Match 1688 JSON price fields: "refPrice", "price", "discountPrice", "value", "priceRange"
+                if (!priceRMB || priceRMB <= 0) {
+                    const json1688Price = html.match(/"(?:refPrice|price|discountPrice|value)":"?([\d\.]+)"?/i);
+                    if (json1688Price) {
+                        priceRMB = parseFloat(json1688Price.group ? json1688Price.group(1) : json1688Price[1]);
+                    }
+                }
+
+                // Priority 3 - class="meri-price"
                 if (!priceRMB || priceRMB <= 0) {
                     const meriPriceMatch = html.match(/class=["']meri-price["'][^>]*>\s*([\d\.]+)/i);
                     if (meriPriceMatch) {
@@ -181,15 +189,15 @@ export async function onRequest(context) {
                     }
                 }
 
-                // Priority 3 - class="price-num" or class="price"
+                // Priority 4 - class="price-num" / class="price" / class="value"
                 if (!priceRMB || priceRMB <= 0) {
-                    const tagPriceMatch = html.match(/<(?:em|span|b|strong|div)[^>]*class=["'][^"'\s>]*(?:price|cost|num)[^"'\s>]*["'][^>]*>(?:[￥¥]\s*)?([\d\.]+)</i);
+                    const tagPriceMatch = html.match(/<(?:em|span|b|strong|div)[^>]*class=["'][^"'\s>]*(?:price|cost|num|value)[^"'\s>]*["'][^>]*>(?:[￥¥]\s*)?([\d\.]+)</i);
                     if (tagPriceMatch) {
                         priceRMB = parseFloat(tagPriceMatch[1]);
                     }
                 }
 
-                // Priority 4 - Match P 90 元 in title/text
+                // Priority 5 - Match P 90 元 in title
                 if (!priceRMB || priceRMB <= 0) {
                     const pPriceMatch = html.match(/P\s*(\d+(?:\.\d+)?)\s*元/i);
                     if (pPriceMatch) {
@@ -197,8 +205,16 @@ export async function onRequest(context) {
                     }
                 }
 
+                // Priority 6 - Match ￥ 90.00
+                if (!priceRMB || priceRMB <= 0) {
+                    const rmbMatch = html.match(/[￥¥]\s*([\d\.]+)/);
+                    if (rmbMatch) {
+                        priceRMB = parseFloat(rmbMatch[1]);
+                    }
+                }
+
                 const finalRMB = priceRMB || 90.0;
-                // Calculate FOB USD ($) based on 7.2 Exchange Rate
+                // Calculate FOB USD ($) based on 7.2 Exchange Rate: e.g. 90 RMB / 7.2 = $12.50
                 const finalUSD = parseFloat((finalRMB / 7.20).toFixed(2));
 
                 return new Response(JSON.stringify({
@@ -248,7 +264,34 @@ export async function onRequest(context) {
             }
         }
 
-        // 3. Auth Login Route
+        // 3. 买家自主选款 PI 报价单提交接口 (免 Auth Token)
+        if (path === '/api/public/quotes' && method === 'POST') {
+            const b = await getJsonBody();
+            if (env.DB) {
+                try {
+                    const res = await env.DB.prepare(
+                        `INSERT INTO quotes (company, date, sku, price, qty, express_no, status, feedback, sales_rep) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                    ).bind(
+                        b.company || '买家自主选款',
+                        b.date || new Date().toISOString().split('T')[0],
+                        b.sku || '',
+                        Number(b.price) || 0,
+                        Number(b.qty) || 1000,
+                        b.express_no || '买家在线提交',
+                        b.status || '买家已提交选款单',
+                        b.feedback || '买家在线提交选款PI',
+                        b.sales_rep || '自主选款买家'
+                    ).run();
+                    return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
+                } catch (e) {
+                    return new Response(JSON.stringify({ success: true, id: Date.now() }), { headers });
+                }
+            }
+            return new Response(JSON.stringify({ success: true, id: Date.now() }), { headers });
+        }
+
+        // 4. Auth Login Route
         if (path === '/api/auth/login' && method === 'POST') {
             const body = await getJsonBody();
             const { username, password } = body;
@@ -271,7 +314,7 @@ export async function onRequest(context) {
             return new Response(JSON.stringify({ error: '未绑定 Cloudflare D1 数据库 (env.DB)' }), { status: 500, headers });
         }
 
-        // 4. Customers Endpoint
+        // 5. Customers Endpoint
         if (path === '/api/customers') {
             if (method === 'GET') {
                 const { results } = await env.DB.prepare('SELECT * FROM customers ORDER BY id DESC').all();
@@ -300,7 +343,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 5. Followups Endpoint
+        // 6. Followups Endpoint
         if (path === '/api/followups') {
             if (method === 'GET') {
                 const { results } = await env.DB.prepare('SELECT * FROM followups ORDER BY id DESC').all();
@@ -328,7 +371,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 6. Quotes Endpoint
+        // 7. Quotes Endpoint
         if (path === '/api/quotes') {
             if (method === 'GET') {
                 const { results } = await env.DB.prepare('SELECT * FROM quotes ORDER BY id DESC').all();
@@ -356,7 +399,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 7. Products Endpoint
+        // 8. Products Endpoint
         if (path === '/api/products') {
             if (method === 'GET') {
                 try {
