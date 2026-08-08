@@ -62,7 +62,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 1. 1688 / 搜鞋网 (sooxie.com) 智能主图与价格抓取接口 (免登录)
+        // 1. 1688 / 搜鞋网 (sooxie.com) 精准主图(支持 id="lnk_thumb" & !bac 动画后缀)与价格抓取接口
         if (path === '/api/scrape-product') {
             let targetUrl = '';
             if (method === 'POST') {
@@ -111,20 +111,18 @@ export async function onRequest(context) {
 
                 const badKeywords = ['-tps-', '60000000', 'sprite', 'logo', 'banner', 'header', 'icon', 'avatar', 'watermark', 'blank.gif', 'pixel.png'];
 
-                // 1a. Check Lazy Loading Attributes (data-original, data-src, data-lazy, data-pic)
-                const lazyMatches = html.match(/data-(?:original|src|lazy|pic)=["']([^"'\s>]+)["']/gi) || [];
-                for (const m of lazyMatches) {
-                    const cleanUrl = m.split(/=["']/)[1].replace(/["']/g, '');
-                    if (!badKeywords.some(b => cleanUrl.includes(b)) && cleanUrl.length > 15) {
-                        image_url = cleanUrl;
-                        break;
-                    }
+                // 1a. Priority 1: Match Sooxie main image with id="lnk_thumb" or id="photoBig"
+                const thumbMatch = html.match(/<img[^>]+id=["']lnk_thumb["'][^>]+src=["']([^"'\s>]+)["']/i) || 
+                                   html.match(/<img[^>]+src=["']([^"'\s>]+)["'][^>]+id=["']lnk_thumb["']/i) ||
+                                   html.match(/id=["']photoBig["'][^>]*>\s*<img[^>]+src=["']([^"'\s>]+)["']/i);
+                if (thumbMatch) {
+                    image_url = thumbMatch[1];
                 }
 
-                // 1b. Check img src / a href (case-insensitive for .jpg, .JPG, .png, .PNG, .webp)
+                // 1b. Priority 2: Check Lazy Loading Attributes (data-original, data-src, data-lazy, data-pic)
                 if (!image_url) {
-                    const srcMatches = html.match(/(?:src|href)=["']([^"'\s>]+?\.(?:jpg|jpeg|webp|png)(?:\?[^"'\s>]*)?)["']/gi) || [];
-                    for (const m of srcMatches) {
+                    const lazyMatches = html.match/data-(?:original|src|lazy|pic)=["']([^"'\s>]+)["']/gi) || [];
+                    for (const m of lazyMatches) {
                         const cleanUrl = m.split(/=["']/)[1].replace(/["']/g, '');
                         if (!badKeywords.some(b => cleanUrl.includes(b)) && cleanUrl.length > 15) {
                             image_url = cleanUrl;
@@ -133,9 +131,20 @@ export async function onRequest(context) {
                     }
                 }
 
-                // 1c. Check 1688 cbu01 / alicdn CDN main images
+                // 1c. Priority 3: Check Sooxie / Xiecdn Image (supporting !bac or query params)
                 if (!image_url) {
-                    const cbuMatches = html.match(/((?:https?:)?\/\/(?:cbu01|img)\.alicdn\.com\/[^\s"'<>]+?\.(?:jpg|jpeg|webp|png))/gi) || [];
+                    const sooxieMatches = html.match(/((?:https?:)?\/\/(?:images\.xiecdn\.com|img\.sooxie\.com|www\.sooxie\.com\/upload)[^\s"'<>]+)/gi) || [];
+                    for (const img of sooxieMatches) {
+                        if (!badKeywords.some(b => img.includes(b)) && img.length > 20) {
+                            image_url = img;
+                            break;
+                        }
+                    }
+                }
+
+                // 1d. Priority 4: Check 1688 cbu01 CDN main images
+                if (!image_url) {
+                    const cbuMatches = html.match(/((?:https?:)?\/\/cbu01\.alicdn\.com\/img\/ibank\/[^\s"'<>]+)/gi) || [];
                     for (const img of cbuMatches) {
                         if (!badKeywords.some(b => img.includes(b))) {
                             image_url = img;
@@ -144,19 +153,7 @@ export async function onRequest(context) {
                     }
                 }
 
-                // 1d. Check JSON imageUrl / offerImage / mainImage / pic_url
-                if (!image_url) {
-                    const jsonMatches = html.match(/"(?:imageUrl|offerImage|mainImage|fullPathImageURI|pic_url)":"([^"]+)"/gi) || [];
-                    for (const m of jsonMatches) {
-                        const cleanUrl = m.split('":"')[1].replace(/"/g, '').replace(/\\\//g, '/');
-                        if (!badKeywords.some(b => cleanUrl.includes(b)) && cleanUrl.length > 15) {
-                            image_url = cleanUrl;
-                            break;
-                        }
-                    }
-                }
-
-                // STRICT HTTPS NORMALIZATION & FALLBACK
+                // STRICT HTTPS NORMALIZATION
                 if (image_url) {
                     if (image_url.startsWith('//')) {
                         image_url = 'https:' + image_url;
@@ -169,34 +166,26 @@ export async function onRequest(context) {
                     image_url = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400';
                 }
 
-                // Smart Price Extraction (Avoid matching title model numbers like A115 or 39-45)
-                // 2a. Match class="price-num" or class="price" tag content
-                const tagPriceMatch = html.match(/<(?:em|span|b|strong|div)[^>]*class=["'][^"'\s>]*(?:price|cost|num)[^"'\s>]*["'][^>]*>(?:[￥¥]\s*)?([\d\.]+)</i);
-                if (tagPriceMatch) {
-                    priceRMB = parseFloat(tagPriceMatch[1]);
+                // 2. Price Extraction: Priority 1 - class="meri-price" (Sooxie exact DOM)
+                const meriPriceMatch = html.match(/class=["']meri-price["'][^>]*>\s*([\d\.]+)/i);
+                if (meriPriceMatch) {
+                    priceRMB = parseFloat(meriPriceMatch[1]);
                 }
 
-                // 2b. Match 拿货价 / 批价 / 批发价 / 出厂价
+                // Priority 2 - class="price-num" or class="price" tag
                 if (!priceRMB || priceRMB <= 0) {
-                    const labelPriceMatch = html.match(/(?:拿货价|批价|批发价|出厂价|单价)[^\d]{0,10}(?:[￥¥]\s*)?([\d\.]+)/i);
+                    const tagPriceMatch = html.match(/<(?:em|span|b|strong|div)[^>]*class=["'][^"'\s>]*(?:price|cost|num)[^"'\s>]*["'][^>]*>(?:[￥¥]\s*)?([\d\.]+)</i);
+                    if (tagPriceMatch) {
+                        priceRMB = parseFloat(tagPriceMatch[1]);
+                    }
+                }
+
+                // Priority 3 - Match 拿货价 / 批价 / 售价 / P 90 元
+                if (!priceRMB || priceRMB <= 0) {
+                    const labelPriceMatch = html.match(/(?:拿货价|批价|批发价|出厂价|价格|单价)[^\d]{0,10}(?:[￥¥]\s*)?([\d\.]+)/i) ||
+                                            html.match(/P\s*(\d+(?:\.\d+)?)\s*元/i);
                     if (labelPriceMatch) {
                         priceRMB = parseFloat(labelPriceMatch[1]);
-                    }
-                }
-
-                // 2c. Match P 90 元 pattern in title/body
-                if (!priceRMB || priceRMB <= 0) {
-                    const pPriceMatch = html.match(/P\s*(\d+(?:\.\d+)?)\s*元/i);
-                    if (pPriceMatch) {
-                        priceRMB = parseFloat(pPriceMatch[1]);
-                    }
-                }
-
-                // 2d. Fallback regex for ￥90
-                if (!priceRMB || priceRMB <= 0) {
-                    const rmbMatch = html.match(/[￥¥]\s*([\d\.]+)/);
-                    if (rmbMatch) {
-                        priceRMB = parseFloat(rmbMatch[1]);
                     }
                 }
 
