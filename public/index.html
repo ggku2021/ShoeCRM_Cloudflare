@@ -1048,7 +1048,7 @@
                     <h3 class="font-bold text-lg text-slate-800">{{ selectedQRProduct.name }}</h3>
                     <p class="text-xs text-gray-500 font-mono mt-1">SKU: {{ selectedQRProduct.sku }}</p>
                     <div class="my-4 flex justify-center">
-                        <canvas id="qr-canvas-print" class="w-40 h-40 border p-1 rounded"></canvas>
+                        <img :src="qrCodeUrl" class="w-40 h-40 border p-1 rounded" />
                     </div>
                     <p class="text-xs text-gray-600"><strong>Upper:</strong> {{ selectedQRProduct.upper_material }}</p>
                     <p class="text-xs text-gray-600"><strong>Outsole:</strong> {{ selectedQRProduct.sole_material }}</p>
@@ -1077,7 +1077,7 @@
                     currentTab: 'lookbook',
                     searchQuery: '', filterLevel: '', filterStage: '',
                     showCustomerModal: false, showFollowupModal: false, showQuoteModal: false, showProductModal: false, showQuoteDetailModal: false,
-                    showMatchModal: false, showPIModal: false, showQRModal: false, previewProductModal: false, previewProductData: {},
+                    showMatchModal: false, showPIModal: false, showQRModal: false, qrCodeUrl: '', previewProductModal: false, previewProductData: {},
                     showLookbookExportModal: false, showClientCartPIModal: false,
                     lookbookSelectedSKUs: [], clientCart: [], lookbookHidePrice: false, lookbookSearch: '', lookbookCategory: '',
                     selectedQuoteDetail: {}, selectedQRProduct: {}, selectedMatchCustomer: {}, matchedProducts: [],
@@ -1567,24 +1567,14 @@ Footwear Export Co., Ltd.`;
                 },
                 showQRTag(p) {
             this.selectedQRProduct = p;
+            this.qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent('https://crm.youzan100.com/?share=catalog&sku=' + (p.sku || ''));
             this.showQRModal = true;
-            this.$nextTick(() => {
-                const canvas = document.getElementById('qr-canvas-print');
-                if (canvas && window.QRCode) {
-                    const qrText = 'https://crm.youzan100.com/?share=catalog&sku=' + encodeURIComponent(p.sku || '');
-                    QRCode.toCanvas(canvas, qrText, { width: 200, margin: 2, color: { dark: '#000000', light: '#ffffff' } }, (error) => {
-                        if (error) console.error('QR生成失败:', error);
-                    });
-                }
-            });
         },
         printQRTag() {
             const tag = document.getElementById('tag-printable');
             if (!tag) return;
-            const canvas = tag.querySelector('canvas');
-            const canvasHtml = canvas ? '<img src="' + canvas.toDataURL() + '" style="width:160px;height:160px;border:1px solid #ccc;padding:4px" />' : '';
             const printWin = window.open('', '_blank', 'width=420,height=550');
-            printWin.document.write('<html><head><title>鞋款吊牌</title><style>body{font-family:sans-serif;padding:24px;text-align:center;color:#333}h3{margin:10px 0 4px;font-size:18px}p{margin:3px 0;color:#666;font-size:13px}.price{color:#059669;font-size:18px;font-weight:bold;margin-top:8px}.sku{font-family:monospace;font-size:11px;color:#999}@media print{body{margin:0;padding:20px}}@page{size:auto;margin:10mm}</style></head><body>' + tag.innerHTML.replace(/<canvas[^>]*><\/canvas>/g, canvasHtml) + '</body></html>');
+            printWin.document.write('<html><head><title>鞋款吊牌</title><style>body{font-family:sans-serif;padding:24px;text-align:center;color:#333}h3{margin:10px 0 4px;font-size:18px}p{margin:3px 0;color:#666;font-size:13px}.price{color:#059669;font-size:18px;font-weight:bold;margin-top:8px}.sku{font-family:monospace;font-size:11px;color:#999}@media print{body{margin:0;padding:20px}}@page{size:auto;margin:10mm}</style></head><body>' + tag.innerHTML + '</body></html>');
             printWin.document.close();
             setTimeout(() => printWin.print(), 500);
         },
