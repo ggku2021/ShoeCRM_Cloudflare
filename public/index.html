@@ -1084,7 +1084,7 @@
                     calcBox: { length: 60, width: 40, height: 35, pairsPerCarton: 12, totalCartons: 100 },
                     selectedTemplateKey: 'new_season', templateCustomer: '',
                     piForm: { piNumber: 'PI-' + Math.floor(100000 + Math.random() * 900000), date: new Date().toISOString().split('T')[0], selectedCompany: '', contactInfo: '', showImages: true, items: [] },
-                    editingCustomer: {}, newFollowup: {}, newQuote: {}, newProduct: {},
+                    editingCustomer: {}, newFollowup: {}, newQuote: {}, newProduct: { sku: '', name: '', image_url: '', price: 0, moq: 1000, size_range: '', upper_material: '', sole_material: '', category: '', target_market: '', tags: '' },
                     customers: [], followups: [], quotes: [], products: []
                 }
             },
@@ -1549,7 +1549,7 @@ Footwear Export Co., Ltd.`;
         async deleteQuote(id) { if (confirm('确定删除吗？')) { this.quotes = this.quotes.filter(x => x.id !== id); if (!this.isDemoMode) await this.apiFetch('/api/quotes/' + id, { method: 'DELETE' }); } },
                 openProductModal(p = null) { if (p) this.newProduct = JSON.parse(JSON.stringify(p)); else this.newProduct = { id: null, sku: 'SKU-', name: '', price: 0 }; this.showProductModal = true; },
                 async saveProduct() {
-                    if (!this.newProduct.sku || !this.newProduct.name) return alert('请填写款号和名称！');
+                    if (!this.newProduct.sku) return alert('请填写货号 (SKU)！');
                     const savedItem = { id: this.newProduct.id || Date.now(), ...this.newProduct };
                     const idx = this.products.findIndex(x => x.id === savedItem.id || x.sku === savedItem.sku);
                     if (idx !== -1) this.products[idx] = savedItem; else this.products.unshift(savedItem);
