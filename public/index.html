@@ -508,17 +508,30 @@
 
             <!-- 模块 7. 鞋款库 -->
             <div v-if="!isPublicCatalogMode && currentTab === 'products'" class="space-y-6">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800">鞋类产品与特征库</h2>
-                        <p class="text-sm text-gray-500">主推鞋款、材质工艺与 1688/搜鞋网一键导入</p>
+                                <div class="flex flex-col gap-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">鞋类产品与特征库</h2>
+                            <p class="text-sm text-gray-500">主推鞋款、材质工艺与 1688/搜鞋网/yupoo一键导入</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button @click="openScraperModal" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-cloud-arrow-down"></i> 一键抓取导入</button>
+                            <button @click="openProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-plus"></i> 手动添加鞋款</button>
+                        </div>
                     </div>
-                    <div class="flex gap-2">
-                        <button @click="openScraperModal" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-spider"></i> 抓取1688/搜鞋网</button>
-                        <button @click="openProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-plus"></i> 手动添加鞋款</button>
+                    <div class="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                        <div class="flex-1 relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <input type="text" v-model="productSearch" placeholder="搜索货号 (SKU)..." class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer whitespace-nowrap">
+                            <input type="checkbox" @change="toggleSelectAll" :checked="selectedProductIds.length === filteredProducts.length && filteredProducts.length > 0" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span>全选 ({{ selectedProductIds.length }}/{{ filteredProducts.length }})</span>
+                        </label>
+                        <button v-if="selectedProductIds.length > 0" @click="batchDelete" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 whitespace-nowrap"><i class="fa-solid fa-trash"></i> 删除选中({{ selectedProductIds.length }})</button>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                     <div v-for="p in filteredProducts" :key="p.id" :class="['bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition group', selectedProductIds.includes(p.id) ? 'border-blue-400 ring-1 ring-blue-300' : 'border-gray-100']">
                         <div class="relative aspect-square w-full bg-gray-100 overflow-hidden cursor-pointer" @click="previewImage(p)">
                             <img :src="p.image_url || 'https://via.placeholder.com/400x400?text=No+Image'" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
