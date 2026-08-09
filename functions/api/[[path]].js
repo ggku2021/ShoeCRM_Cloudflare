@@ -62,7 +62,7 @@ export async function onRequest(context) {
             }
         }
 
-        // 1. 1688 / 搜鞋网 (sooxie.com) 智能主图与多源价格抓取接口 (免登录)
+        // 1. 1688 / 搜鞋网 / yupoo 智能主图与多源价格抓取接口 (免登录)
         if (path === '/api/scrape-product') {
             let targetUrl = '';
             if (method === 'POST') {
@@ -73,7 +73,7 @@ export async function onRequest(context) {
             }
 
             if (!targetUrl) {
-                return new Response(JSON.stringify({ error: '请提供有效的 1688 或 搜鞋网 (sooxie.com) 商品网址' }), { status: 400, headers });
+                return new Response(JSON.stringify({ error: '请提供有效的 1688 / 搜鞋网 / yupoo 商品网址' }), { status: 400, headers });
             }
 
             try {
@@ -124,10 +124,29 @@ export async function onRequest(context) {
                                html.match(/货\s*号\s*[：:]\s*([^\s<,，]{3,30})/i);
                     if (dM) sku = dM[1].trim();
                 }
-                // Priority 3: Fallback URL ID (no prefix)
+                // Priority 3: yupoo - extract SKU from image filename
+                if (!sku && targetUrl.includes('yupoo.com')) {
+                    // Find all image URLs in the album page
+                    const yupooImgs = html.match(/((?:https?:)?\/\/photo\.yupoo\.com\/[^\s"'<>]+\.(?:jpg|jpeg|png|webp))/gi) || [];
+                    if (yupooImgs.length > 0) {
+                        // Use the first image URL, derive SKU from filename
+                        const imgUrl = yupooImgs[0];
+                        const fnMatch = imgUrl.match(/\/([^\/]+)\.(?:jpg|jpeg|png|webp)$/i);
+                        if (fnMatch) sku = fnMatch[1];
+                        if (!sku) { // fallback to album ID in URL
+                            const albumMatch = targetUrl.match(/albums\/(\d+)/);
+                            if (albumMatch) sku = albumMatch[1];
+                        }
+                    }
+                }
+                // Priority 4: Fallback URL ID (no prefix)
                 if (!sku) {
                     if (targetUrl.includes('1688.com')) { const m = targetUrl.match(/offer\/(\d+)\.html/); if (m) sku = m[1]; }
                     else if (targetUrl.includes('sooxie.com')) { const m = targetUrl.match(/detail\/(\d+)/) || targetUrl.match(/(\d+)\.html/) || targetUrl.match(/id=(\d+)/); if (m) sku = m[1]; }
+                    else if (targetUrl.includes('yupoo.com')) {
+                        const albumM = targetUrl.match(/albums\/(\d+)/);
+                        if (albumM) sku = albumM[1];
+                    }
                 }
                 if (!sku) { sku = String(Math.floor(100000 + Math.random() * 900000)); }
 
@@ -226,6 +245,20 @@ export async function onRequest(context) {
                     const bacMatches = html.match(/((?:https?:)?\/\/images\.xiecdn\.com\/[^\s"'<>]+!bac)/gi) || [];
                     if (bacMatches.length > 0) {
                         raw_image_url = bacMatches[0]; // Prefer !bac processed image
+                    }
+                }
+
+                // 1e. Priority 5: yupoo album images
+                if (!raw_image_url && targetUrl.includes('yupoo.com')) {
+                    // Yupoo photo.yupoo.com or pic.yupoo.com images
+                    const yp = html.match(/((?:https?:)?\/\/(?:photo|pic)\.yupoo\.com\/[^\s"'<>]+\.(?:jpg|jpeg|png|webp)(?:\![\w]+)?)/gi) || [];
+                    if (yp.length > 0) {
+                        raw_image_url = yp[0]; // First image as main
+                    }
+                    // Fallback: any image in the page with yupoo in URL
+                    if (!raw_image_url) {
+                        const anyImg = html.match(/((?:https?:)?\/\/[^\s"'<>]*yupoo[^\s"'<>]*\.(?:jpg|jpeg|png|webp)[^\s"'<>]*)/gi) || [];
+                        if (anyImg.length > 0) raw_image_url = anyImg[0];
                     }
                 }
 
