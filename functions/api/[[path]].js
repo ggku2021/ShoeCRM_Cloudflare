@@ -111,6 +111,23 @@ export async function onRequest(context) {
 
                 const badKeywords = ['-tps-', '60000000', 'sprite', 'logo', 'banner', 'header', 'icon', 'avatar', 'watermark', 'blank.gif', 'pixel.png'];
 
+                                // 1a. Priority 0: JSON-LD structured data (best source for both platforms)
+                let jsonLdData = null;
+                const jsonLdMatch = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
+                if (jsonLdMatch) {
+                    try { jsonLdData = JSON.parse(jsonLdMatch[1]); } catch(e) {}
+                }
+                if (jsonLdData) {
+                    if (!raw_image_url && jsonLdData.image) {
+                        raw_image_url = Array.isArray(jsonLdData.image) ? jsonLdData.image[0] : jsonLdData.image;
+                    }
+                    if ((!priceRMB || priceRMB <= 0) && jsonLdData.offers) {
+                        const offer = Array.isArray(jsonLdData.offers) ? jsonLdData.offers[0] : jsonLdData.offers;
+                        if (offer && offer.price) priceRMB = parseFloat(offer.price);
+                    }
+                    if (!name && jsonLdData.name) name = jsonLdData.name;
+                }
+
                 // 1a. Priority 1: og:image
                 const ogImgMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"'\s>]+)["']/i);
                 if (ogImgMatch) {
@@ -127,11 +144,36 @@ export async function onRequest(context) {
                     }
                 }
 
-                // 1c. Priority 3: Check Sooxie / Xiecdn Image
+                // 1c. Priority 3: Check Sooxie / Xiecdn Image (enhanced patterns)
                 if (!raw_image_url) {
-                    const sooxieMatches = html.match(/((?:https?:)?\/\/(?:images\.xiecdn\.com|img\.sooxie\.com|www\.sooxie\.com\/upload)[^\s"'<>]+)/gi) || [];
+                    // Try data-src / data-original for lazy-loaded images first
+                    const lazyImg = html.match(/<img[^>]+(?:data-src|data-original|data-lazy-src)=["']([^"'\s>]+)["']/i);
+                    if (lazyImg) {
+                        const lazyUrl = lazyImg[1];
+                        if (lazyUrl.includes('xiecdn') || lazyUrl.includes('sooxie') || lazyUrl.includes('alicdn') || lazyUrl.includes('/upload/')) {
+                            raw_image_url = lazyUrl;
+                        }
+                    }
+                }
+                if (!raw_image_url) {
+                    // Match Sooxie main product image: large/big/zoom image, avoid thumbnails
+                    const bigImg = html.match(/<img[^>]+(?:class=["'][^"']*(?:big|zoom|large|main|pic|photo)[^"']*["'])[^>]+src=["']([^"'\s>]+)["']/i) ||
+                                   html.match(/<img[^>]+src=["']([^"'\s>]+)["'][^>]+(?:class=["'][^"']*(?:big|zoom|large|main|pic|photo)[^"']*["'])/i) ||
+                                   html.match(/<img[^>]+src=["']([^"'\s>]+\.(?:jpg|jpeg|png|webp))["'][^>]*>/i);
+                    if (bigImg) {
+                        const bigUrl = bigImg[1];
+                        if (!badKeywords.some(b => bigUrl.includes(b)) && 
+                            !bigUrl.includes('thumb') && !bigUrl.includes('icon') && !bigUrl.includes('60x60') && !bigUrl.includes('100x100')) {
+                            raw_image_url = bigUrl;
+                        }
+                    }
+                }
+                if (!raw_image_url) {
+                    const sooxieMatches = html.match(/((?:https?:)?\/\/(?:images\.xiecdn\.com|img\.sooxie\.com|www\.sooxie\.com\/upload|sooxie\.com\/)[^\s"'<>]+)/gi) || [];
                     for (const img of sooxieMatches) {
-                        if (!badKeywords.some(b => img.includes(b)) && img.length > 20) {
+                        const url = img.replace(/![a-zA-Z0-9_\-\/]+$/i, '').replace(/\?[^"'\s>]*$/i, '');
+                        if (!badKeywords.some(b => url.includes(b)) && url.length > 20 &&
+                            !url.includes('thumb') && !url.includes('60x60') && !url.includes('100x100') && !url.includes('100x100')) {
                             raw_image_url = img;
                             break;
                         }
@@ -172,19 +214,64 @@ export async function onRequest(context) {
                     priceRMB = parseFloat(jsPriceMatch[1]);
                 }
 
-                // Priority 2 - Match 1688 JSON price fields: "refPrice", "price", "discountPrice", "value", "priceRange"
+                // Priority 2 - Match 1688 JSON price fields and data attributes
                 if (!priceRMB || priceRMB <= 0) {
-                    const json1688Price = html.match(/"(?:refPrice|price|discountPrice|value)":"?([\d\.]+)"?/i);
+                    // 1688 data attributes: data-range-price, data-price
+                    const dataPrice = html.match(/data-(?:range-)?price=["']([\d\.]+)/i);
+                    if (dataPrice) {
+                        priceRMB = parseFloat(dataPrice[1]);
+                    }
+                }
+                if (!priceRMB || priceRMB <= 0) {
+                    // 1688 iDetailData/__od_data JSON block
+                    const idetailMatch = html.match(/(?:iDetailData|__od_data|window\.__data__)\s*[:=]\s*(\{[\s\S]*?\})\s*[;
+]/i);
+                    if (idetailMatch) {
+                        try {
+                            const data = JSON.parse(idetailMatch[1]);
+                            const skuInfo = data.sku || data.skuInfo || data.skuMap || {};
+                            const firstSku = Object.values(skuInfo)[0] || {};
+                            if (firstSku.price) priceRMB = parseFloat(firstSku.price);
+                        } catch(e) {}
+                    }
+                }
+                if (!priceRMB || priceRMB <= 0) {
+                    // 1688 meta/JSON nested price fields
+                    const json1688Price = html.match(/"(?:refPrice|price|discountPrice|value|offerPrice|originPrice)":"?([\d\.]+)"?/i);
                     if (json1688Price) {
-                        priceRMB = parseFloat(json1688Price.group ? json1688Price.group(1) : json1688Price[1]);
+                        priceRMB = parseFloat(json1688Price[1]);
+                    }
+                }
+                if (!priceRMB || priceRMB <= 0) {
+                    // 1688 "offerPriceRange" pattern in JS
+                    const offerRange = html.match(/["']price(?:Range)?["']\s*:\s*["']?([\d\.]+)\s*[-~]\s*([\d\.]+)["']?/i);
+                    if (offerRange) {
+                        priceRMB = parseFloat(offerRange[1]); // Take lower price
+                    }
+                }
+                if (!priceRMB || priceRMB <= 0) {
+                    // Generic JSON price extraction with better context
+                    const genPrice = html.match(/"price"\s*:\s*([\d\.]+)/i);
+                    if (genPrice) {
+                        priceRMB = parseFloat(genPrice[1]);
                     }
                 }
 
-                // Priority 3 - class="meri-price"
+                // Priority 3 - Sooxie specific price patterns
                 if (!priceRMB || priceRMB <= 0) {
-                    const meriPriceMatch = html.match(/class=["']meri-price["'][^>]*>\s*([\d\.]+)/i);
-                    if (meriPriceMatch) {
-                        priceRMB = parseFloat(meriPriceMatch[1]);
+                    // Sooxie price in various formats
+                    const sooxiePrice = html.match(/class=["'](?:meri-price|price-num|price-value|product-price|sale-price|now-price)["'][^>]*>\s*[¥￥]?\s*([\d\.]+)/i) ||
+                                        html.match(/<span[^>]*>\s*[¥￥]\s*([\d\.]+)\s*<\/span>/i) ||
+                                        html.match(/class=["']price["'][^>]*>\s*[¥￥]?\s*([\d\.]+)/i);
+                    if (sooxiePrice) {
+                        priceRMB = parseFloat(sooxiePrice[1]);
+                    }
+                }
+                if (!priceRMB || priceRMB <= 0) {
+                    // Try to find any number near ¥ or 元 or RMB
+                    const rmbContext = html.match(/[¥￥元]\s*([\d\.]+)\s*[元]?/i);
+                    if (rmbContext) {
+                        priceRMB = parseFloat(rmbContext[1]);
                     }
                 }
 
