@@ -92,15 +92,61 @@ export async function onRequest(context) {
                 let priceRMB = 0;
                 let sku = '';
 
-                // Extract SKU / Item ID
-                if (targetUrl.includes('1688.com')) {
-                    const match = targetUrl.match(/offer\/(\d+)\.html/);
-                    sku = match ? '1688-' + match[1] : '1688-' + Math.floor(100000 + Math.random() * 900000);
-                } else if (targetUrl.includes('sooxie.com')) {
-                    const match = targetUrl.match(/detail\/(\d+)/) || targetUrl.match(/(\d+)\.html/) || targetUrl.match(/id=(\d+)/);
-                    sku = match ? 'SOOXIE-' + match[1] : 'SOOXIE-' + Math.floor(100000 + Math.random() * 900000);
-                } else {
-                    sku = 'SKU-' + Math.floor(100000 + Math.random() * 900000);
+                // Extract SKU / 货号 from page content (no platform prefix)
+                // Priority 1: Extract from JSON-LD (productID, sku, mpn)
+                if (jsonLdData && jsonLdData.sku) {
+                    sku = String(jsonLdData.sku).trim();
+                }
+                if (!sku && jsonLdData && jsonLdData.productID) {
+                    sku = String(jsonLdData.productID).trim();
+                }
+
+                // Priority 2: sooxie - extract "货号" / "款号" / "编号" field from page
+                if (!sku) {
+                    const artnoLabels = html.match(/(?:货[号號]|款[号號]|商品编号|商品货号|商品款号|产品编号|编号|article\s*no|item\s*no|style\s*no)[\s：:]*<\/?\w+[^>]*>?\s*([A-Za-z0-9\-_./]+)/i);
+                    if (artnoLabels) {
+                        const val = artnoLabels[1].trim();
+                        if (val.length >= 3 && val.length <= 30 && !/^(?:jpg|png|gif|jpeg|webp|html|http)/i.test(val)) {
+                            sku = val;
+                        }
+                    }
+                }
+                // Try td-based layout: <td>货号</td><td>XXX</td>
+                if (!sku) {
+                    const tdMatch = html.match(/<t[dh][^>]*>[\s]*(?:货[号號]|款[号號]|编号)[\s]*<\/t[dh]>\s*<t[dh][^>]*>\s*([^<\s]{3,30})\s*<\/t[dh]>/i);
+                    if (tdMatch) {
+                        sku = tdMatch[1].replace(/<[^>]+>/g, '').trim();
+                    }
+                }
+                // Try simple key-value: 货号：XXX or 款号: XXX
+                if (!sku) {
+                    const kvMatch = html.match(/(?:货[号號]|款[号號]|编号|article|style)\s*[：:]\s*([A-Za-z0-9\-_./]{3,30})/i);
+                    if (kvMatch) sku = kvMatch[1].trim();
+                }
+
+                // Priority 3: 1688 - extract "货号" from product attributes / iDetailData
+                if (!sku) {
+                    // Try 1688 data attributes
+                    const dataArtNo = html.match(/data-(?:art|article|item|style)-?no=["']([^"']+)["']/i) ||
+                                      html.match(/"货号"\s*:\s*"([^"]+)"/i) ||
+                                      html.match(/货\s*号\s*[：:]\s*([^\s<,，]{3,30})/i);
+                    if (dataArtNo) sku = dataArtNo[1].trim();
+                }
+
+                // Priority 4: Fallback - extract numeric ID from URL (no prefix)
+                if (!sku) {
+                    if (targetUrl.includes('1688.com')) {
+                        const match = targetUrl.match(/offer\/(\d+)\.html/);
+                        if (match) sku = match[1];
+                    } else if (targetUrl.includes('sooxie.com')) {
+                        const match = targetUrl.match(/detail\/(\d+)/) || targetUrl.match(/(\d+)\.html/) || targetUrl.match(/id=(\d+)/);
+                        if (match) sku = match[1];
+                    }
+                }
+
+                // Final fallback
+                if (!sku) {
+                    sku = String(Math.floor(100000 + Math.random() * 900000));
                 }
 
                 // Extract Title
