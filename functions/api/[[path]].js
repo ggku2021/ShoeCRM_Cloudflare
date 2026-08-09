@@ -232,8 +232,7 @@ export async function onRequest(context) {
                 }
                 if (!priceRMB || priceRMB <= 0) {
                     // 1688 iDetailData/__od_data JSON block
-                    const idetailMatch = html.match(/(?:iDetailData|__od_data|window\.__data__)\s*[:=]\s*(\{[\s\S]*?\})\s*[;
-]/i);
+                    const idetailMatch = html.match(/(?:iDetailData|__od_data|window\.__data__)\s*[:=]\s*(\{[^]+\})\s*[;\n]/i);
                     if (idetailMatch) {
                         try {
                             const data = JSON.parse(idetailMatch[1]);
