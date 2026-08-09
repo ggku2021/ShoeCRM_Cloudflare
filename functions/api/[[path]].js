@@ -676,8 +676,8 @@ export async function onRequest(context) {
                             b.sku || '', b.name || '', b.category || '跑鞋',
                             b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
                             Number(b.moq) || 1000, b.target_market || '', b.tags || '',
-                            b.size_range || '',
-                            b.image_url || '', b.size_range || '', numId, b.sku || ''
+                            b.image_url || '',
+                            b.size_range || '', numId, b.sku || '''
                         ).run();
                         return new Response(JSON.stringify({ success: true, id: numId }), { headers });
                     } else {
@@ -688,8 +688,8 @@ export async function onRequest(context) {
                             b.sku || '', b.name || '', b.category || '跑鞋',
                             b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
                             Number(b.moq) || 1000, b.target_market || '', b.tags || '',
-                            b.size_range || '',
-                            b.image_url || ''
+                            b.image_url || '',
+                            b.size_range || ''
                         ).run();
                         const lastId = res && res.meta && res.meta.last_row_id ? res.meta.last_row_id : Date.now();
                         return new Response(JSON.stringify({ success: true, id: lastId }), { headers });
