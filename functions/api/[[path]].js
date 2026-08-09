@@ -180,6 +180,14 @@ export async function onRequest(context) {
                     }
                 }
 
+                // 1c2. Priority for xiecdn images with !bac suffix (processed main image)
+                if (raw_image_url && raw_image_url.includes('xiecdn') && !raw_image_url.includes('!bac')) {
+                    const bacMatches = html.match(/((?:https?:)?\/\/images\.xiecdn\.com\/[^\s"'<>]+!bac)/gi) || [];
+                    if (bacMatches.length > 0) {
+                        raw_image_url = bacMatches[0]; // Prefer !bac processed image
+                    }
+                }
+
                 // 1d. Priority 4: Check 1688 cbu01 CDN main images
                 if (!raw_image_url) {
                     const cbuMatches = html.match(/((?:https?:)?\/\/cbu01\.alicdn\.com\/img\/ibank\/[^\s"'<>]+)/gi) || [];
@@ -194,7 +202,7 @@ export async function onRequest(context) {
                 // CLEAN AND NORMALIZE IMAGE URL
                 let image_url = raw_image_url || '';
                 if (image_url) {
-                    image_url = image_url.replace(/![a-zA-Z0-9_\-\/]+$/i, '');
+                    image_url = image_url.replace(/!\d+x?\d*(?:_?[a-z]*\d*x?\d*)?$/i, ''); // Strip size suffixes like !200x200, keep !bac processing tags
                     image_url = image_url.replace(/\?[^"'\s>]*$/i, '');
 
                     if (image_url.startsWith('//')) {
