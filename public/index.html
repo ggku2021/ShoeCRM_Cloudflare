@@ -1377,16 +1377,15 @@ Footwear Export Co., Ltd.`;
                 async saveScrapedProduct() {
                     if (!this.scrapedProduct.name || !this.scrapedProduct.sku) return alert('请检查抓取商品信息！');
                     try {
-                        const savedItem = { id: Date.now(), ...this.scrapedProduct };
-                        this.products.unshift(savedItem);
-                        localStorage.setItem('shoecrm_local_products', JSON.stringify(this.products));
-
                         if (!this.isDemoMode) {
-                            try {
-                                const res = await this.apiFetch('/api/products', { method: 'POST', body: this.scrapedProduct });
-                                if (res && res.id) savedItem.id = res.id;
-                            } catch (err) {}
+                            const res = await this.apiFetch('/api/products', { method: 'POST', body: this.scrapedProduct });
+                            if (res && res.id) {
+                                this.products.unshift({ id: res.id, ...this.scrapedProduct });
+                            }
                             await this.fetchAllData();
+                        } else {
+                            const savedItem = { id: Date.now(), ...this.scrapedProduct };
+                            this.products.unshift(savedItem);
                         }
                         this.showScraperModal = false;
                         alert('成功保存商品 [' + this.scrapedProduct.sku + '] 至鞋款库！');
@@ -1478,21 +1477,7 @@ Footwear Export Co., Ltd.`;
                     try {
                         this.customers = await this.apiFetch('/api/customers') || [];
                         this.followups = await this.apiFetch('/api/followups') || [];
-                        this.quotes = await this.apiFetch('/api/quotes') || [];
-                        const remoteProducts = await this.apiFetch('/api/products') || [];
-                        const storedLocal = JSON.parse(localStorage.getItem('shoecrm_local_products') || '[]');
-                        
-                        const remoteSkus = new Set(remoteProducts.map(p => p.sku));
-                        const localSaved = storedLocal.filter(p => !remoteSkus.has(p.sku));
-                        const currentUnsaved = this.products.filter(p => !remoteSkus.has(p.sku));
-                        
-                        const combined = [...currentUnsaved, ...localSaved, ...remoteProducts];
-                        const seen = new Set();
-                        this.products = combined.filter(p => {
-                            if (!p.sku || seen.has(p.sku)) return false;
-                            seen.add(p.sku); return true;
-                        });
-                        localStorage.setItem('shoecrm_local_products', JSON.stringify(this.products));
+                        this.products = await this.apiFetch('/api/products') || [];
                     } catch (e) {}
                 },
                 previewImage(p) { this.previewProductData = p; this.previewProductModal = true; },
@@ -1555,18 +1540,17 @@ Footwear Export Co., Ltd.`;
                     const savedItem = { id: this.newProduct.id || Date.now(), ...this.newProduct };
                     const idx = this.products.findIndex(x => x.id === savedItem.id || x.sku === savedItem.sku);
                     if (idx !== -1) this.products[idx] = savedItem; else this.products.unshift(savedItem);
-                    localStorage.setItem('shoecrm_local_products', JSON.stringify(this.products));
                     if (!this.isDemoMode) { await this.apiFetch('/api/products', { method: 'POST', body: this.newProduct }); await this.fetchAllData(); }
                     this.showProductModal = false; alert('保存成功！');
                 },
                 async deleteProduct(id) {
                     const targetProduct = this.products.find(x => x.id === id); const sku = targetProduct ? targetProduct.sku : '';
                     if (confirm('确定删除此鞋款吗？')) {
-                        this.products = this.products.filter(x => x.id !== id && (sku ? x.sku !== sku : true));
-                        localStorage.setItem('shoecrm_local_products', JSON.stringify(this.products));
                         if (!this.isDemoMode) {
                             try { await this.apiFetch('/api/products/' + id, { method: 'DELETE' }); } catch(e){}
                             await this.fetchAllData();
+                        } else {
+                            this.products = this.products.filter(x => x.id !== id && (sku ? x.sku !== sku : true));
                         }
                         alert('已删除！');
                     }
