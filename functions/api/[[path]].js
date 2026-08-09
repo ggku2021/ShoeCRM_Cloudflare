@@ -106,9 +106,22 @@ export async function onRequest(context) {
                     const kvM = html.match(/(?:货号|款号|编号|article|style)\s*[：:]\s*([A-Za-z0-9\-_.\/]{3,30})/i);
                     if (kvM) sku = kvM[1].trim();
                 }
-                // Priority 2: 1688 data attributes
+                // Priority 2: 1688 attributes
                 if (!sku) {
-                    const dM = html.match(/data-(?:art|article|item|style)-?no=["']([^"']+)["']/i) || html.match(/"货号"\s*:\s*"([^"]+)"/i) || html.match(/货\s*号\s*[：:]\s*([^\s<,，]{3,30})/i);
+                    // 1688 data-offer-id (most reliable)
+                    const offerId = html.match(/data-(?:offer|item)-?id=["'](\d+)["']/i);
+                    if (offerId) sku = offerId[1];
+                }
+                if (!sku) {
+                    // 1688 table attributes: rows containing "货号" or "产品货号"
+                    const attrRow = html.match(/<tr[^>]*>\s*<t[dh][^>]*>\s*(?:货\s*号|产品货号|货品编号)\s*<\/t[dh]>\s*<t[dh][^>]*>\s*([^<\s]{3,30})\s*<\/t[dh]>/i);
+                    if (attrRow) sku = attrRow[1].replace(/<[^>]+>/g, '').trim();
+                }
+                if (!sku) {
+                    // Any data attribute with art/item/style number
+                    const dM = html.match(/data-(?:art|article|item|style|product)-?no=["']([^"']+)["']/i) ||
+                               html.match(/"货号"\s*:\s*"([^"]+)"/i) ||
+                               html.match(/货\s*号\s*[：:]\s*([^\s<,，]{3,30})/i);
                     if (dM) sku = dM[1].trim();
                 }
                 // Priority 3: Fallback URL ID (no prefix)
@@ -207,11 +220,21 @@ export async function onRequest(context) {
                     }
                 }
 
-                // 1d. Priority 4: Check 1688 cbu01 CDN main images
+                // 1d. Priority 4: Check 1688 alicdn images (modern CDNs)
                 if (!raw_image_url) {
-                    const cbuMatches = html.match(/((?:https?:)?\/\/cbu01\.alicdn\.com\/img\/ibank\/[^\s"'<>]+)/gi) || [];
-                    for (const img of cbuMatches) {
-                        if (!badKeywords.some(b => img.includes(b))) {
+                    // Priority: alicdn 800x800 main images
+                    const alicdn800 = html.match(/((?:https?:)?\/\/(?:cbu01|cbu02|img)\.alicdn\.com\/(?:img\/ibank|imgextra|bao\/uploaded)\/[^\s"'<>]+?800x800[^\s"'<>]*)/gi) || [];
+                    for (const img of alicdn800) {
+                        if (!badKeywords.some(b => img.includes(b))) { raw_image_url = img; break; }
+                    }
+                }
+                if (!raw_image_url) {
+                    // Any alicdn image (cbu01, img.alicdn.com, imgextra)
+                    const alicdnImgs = html.match(/((?:https?:)?\/\/(?:cbu01|cbu02|img)\.alicdn\.com\/(?:img\/ibank|imgextra|bao\/uploaded)\/[^\s"'<>]+)/gi) || [];
+                    for (const img of alicdnImgs) {
+                        const url = img.replace(/![\da-zA-Z_\-\/]+$/i, '');
+                        if (!badKeywords.some(b => url.includes(b)) && url.length > 30 &&
+                            !url.includes('60x60') && !url.includes('100x100') && !url.includes('150x150')) {
                             raw_image_url = img;
                             break;
                         }
@@ -250,6 +273,28 @@ export async function onRequest(context) {
                     }
                 }
                 if (!priceRMB || priceRMB <= 0) {
+                    // 1688 __PRELOADED_STATE__ - most complete data source (before iDetailData)
+                    const preloadMatch = html.match(/(?:__PRELOADED_STATE__|window\.__INIT_DATA__)\s*=\s*(\{[^]+\})\s*[;\n]|<script[^>]*>\s*window\.__PRELOADED_STATE__\s*=\s*(\{[^]+?\})\s*<\//i);
+                    if (preloadMatch) {
+                        try {
+                            const pdata = JSON.parse(preloadMatch[1] || preloadMatch[2]);
+                            const offer = pdata?.offer || pdata?.detail?.offer || pdata?.globalData?.offerModel || {};
+                            const p = offer?.price || offer?.beginAmount || offer?.refPrice || offer?.origPrice;
+                            if (p && !isNaN(parseFloat(p))) priceRMB = parseFloat(p);
+                            if (!raw_image_url) {
+                                const imgs = offer?.images || pdata?.detail?.images || offer?.imageList || [];
+                                if (Array.isArray(imgs) && imgs.length > 0) {
+                                    raw_image_url = typeof imgs[0] === 'string' ? imgs[0] : (imgs[0].url || imgs[0].src || imgs[0]);
+                                }
+                            }
+                            if (!sku) {
+                                const oid = offer?.offerId || offer?.offer_id || pdata?.detail?.offerId || pdata?.offerId;
+                                if (oid) sku = String(oid);
+                            }
+                        } catch(e) {}
+                    }
+                }
+                if (!priceRMB || priceRMB <= 0) {
                     // 1688 iDetailData/__od_data JSON block
                     const idetailMatch = html.match(/(?:iDetailData|__od_data|window\.__data__)\s*[:=]\s*(\{[^]+\})\s*[;\n]/i);
                     if (idetailMatch) {
@@ -274,6 +319,16 @@ export async function onRequest(context) {
                     if (offerRange) {
                         priceRMB = parseFloat(offerRange[1]); // Take lower price
                     }
+                }
+                if (!priceRMB || priceRMB <= 0) {
+                    // 1688 beginAmount / priceRange in JSON
+                    const beginAmt = html.match(/"beginAmount"\s*:\s*"?([\d\.]+)"?/i);
+                    if (beginAmt) priceRMB = parseFloat(beginAmt[1]);
+                }
+                if (!priceRMB || priceRMB <= 0) {
+                    // 1688 offerPrice in script data
+                    const offerPr = html.match(/"offerPrice"\s*:\s*"?([\d\.]+)"?/i) || html.match(/"origPrice"\s*:\s*"?([\d\.]+)"?/i);
+                    if (offerPr) priceRMB = parseFloat(offerPr[1]);
                 }
                 if (!priceRMB || priceRMB <= 0) {
                     // Generic JSON price extraction with better context
