@@ -288,40 +288,20 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    <div v-for="p in filteredLookbookProducts" :key="p.id" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition duration-300 group flex flex-col justify-between">
-                        <div>
-                            <div class="relative h-64 w-full bg-slate-100 overflow-hidden cursor-pointer" @click="previewImage(p)">
-                                <img :src="p.image_url || 'https://via.placeholder.com/400x300?text=No+Image'" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-                                <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition duration-300 flex items-center justify-center text-white gap-2 font-bold text-xs"><i class="fa-solid fa-expand text-lg"></i> 点击放大查看</div>
-                                <span class="absolute top-3 left-3 bg-slate-900/80 text-white px-2.5 py-1 rounded-md text-xs font-mono font-semibold backdrop-blur">{{ p.sku }}</span>
-                                <button v-if="!isPublicCatalogMode" @click.stop="toggleLookbookSelection(p.sku)" :class="['absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow transition', isLookbookSelected(p.sku) ? 'bg-teal-600 text-white' : 'bg-white/80 text-gray-400 hover:bg-white']"><i class="fa-solid fa-check"></i></button>
-                                <button v-else @click.stop="toggleClientCart(p)" :class="['absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-bold shadow transition flex items-center gap-1', isClientCartSelected(p.sku) ? 'bg-teal-600 text-white' : 'bg-white/90 text-teal-700 hover:bg-white']"><i :class="['fa-solid', isClientCartSelected(p.sku) ? 'fa-check' : 'fa-plus']"></i><span>{{ isClientCartSelected(p.sku) ? '已挑选中' : '挑选此款' }}</span></button>
-                            </div>
-                            <div class="p-4 space-y-2">
-                                <h3 class="font-bold text-gray-800 text-base leading-snug">{{ p.name }}</h3>
-                                <div class="flex flex-wrap gap-1 py-1">
-                                    <span class="bg-teal-50 text-teal-700 text-[10px] px-2 py-0.5 rounded font-medium border border-teal-100">{{ p.category }}</span>
-                                    <span v-if="p.target_market" class="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded font-medium">{{ p.target_market }}</span>
-                                </div>
-                                <div class="text-xs text-gray-500 space-y-1 pt-1">
-                                    <p><strong>鞋面材质：</strong>{{ p.upper_material || '未填' }}</p>
-                                    <p><strong>鞋底材质：</strong>{{ p.sole_material || '未填' }}</p>
-                                    <p v-if="p.tags"><strong>卖点特色：</strong><span class="text-blue-600">{{ p.tags }}</span></p>
-                                </div>
-                            </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                    <div v-for="p in filteredLookbookProducts" :key="p.id" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition group cursor-pointer" @click="previewImage(p)">
+                        <div class="relative aspect-square w-full bg-slate-100 overflow-hidden">
+                            <img :src="p.image_url || 'https://via.placeholder.com/400x400?text=No+Image'" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <button v-if="!isPublicCatalogMode" @click.stop="toggleLookbookSelection(p.sku)" :class="['absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center transition shadow text-xs', isLookbookSelected(p.sku) ? 'bg-teal-500 text-white' : 'bg-white/90 text-teal-600']"><i class="fa-solid fa-check"></i></button>
+                            <button v-else @click.stop="toggleClientCart(p)" :class="['absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold shadow transition', isClientCartSelected(p.sku) ? 'bg-teal-500 text-white' : 'bg-white/90 text-teal-600']"><i class="fa-solid" :class="isClientCartSelected(p.sku) ? 'fa-check' : 'fa-plus'"></i></button>
                         </div>
-                        <div class="p-4 pt-0 border-t border-gray-50 flex items-center justify-between mt-2">
-                            <div>
-                                <span class="text-xs text-gray-400 block">起订量: {{ p.moq }}双</span>
-                                <span v-if="!lookbookHidePrice" class="text-lg font-bold text-emerald-600">${{ p.price }} <span class="text-xs text-gray-400 font-normal">/双</span></span>
-                                <span v-else class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-lock me-1"></i>价格询价</span>
-                            </div>
-                            <button v-if="!isPublicCatalogMode" @click="openPIWithSingleProduct(p)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1"><i class="fa-solid fa-file-invoice"></i> 转报价PI</button>
-                            <button v-else @click="toggleClientCart(p)" :class="['px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1', isClientCartSelected(p.sku) ? 'bg-teal-600 text-white' : 'bg-teal-50 text-teal-700 hover:bg-teal-100']"><i class="fa-solid fa-basket-shopping"></i><span>{{ isClientCartSelected(p.sku) ? '取消选择' : '加入选款' }}</span></button>
+                        <div class="p-2.5 space-y-1">
+                            <p class="text-xs font-mono font-semibold text-gray-800 truncate">{{ p.sku }}</p>
+                            <p class="text-xs text-gray-400" v-if="p.size_range">{{ p.size_range }}码</p>
+                            <p class="text-sm font-bold text-emerald-600">${{ p.price }}</p>
                         </div>
                     </div>
+                </div>
                 </div>
             </div>
 
@@ -538,21 +518,21 @@
                         <button @click="openProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-plus"></i> 手动添加鞋款</button>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div v-for="p in products" :key="p.id" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition">
-                        <div class="relative h-48 w-full bg-gray-100 rounded-lg overflow-hidden mb-3">
-                            <img :src="p.image_url || 'https://via.placeholder.com/300x200?text=No+Image'" class="w-full h-full object-cover">
-                            <span class="absolute top-2 left-2 bg-slate-900/80 text-white px-2 py-0.5 rounded text-xs font-mono">{{ p.sku }}</span>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                    <div v-for="p in products" :key="p.id" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group">
+                        <div class="relative aspect-square w-full bg-gray-100 overflow-hidden cursor-pointer" @click="previewImage(p)">
+                            <img :src="p.image_url || 'https://via.placeholder.com/400x400?text=No+Image'" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
                         </div>
-                        <div class="flex justify-between items-start mb-2">
-                            <h3 class="font-bold text-gray-800 text-base">{{ p.name }}</h3>
-                            <span class="text-lg font-bold text-emerald-600">${{ p.price }}</span>
-                        </div>
-                        <div class="flex items-center justify-between pt-1">
-                            <button @click="showQRTag(p)" class="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded hover:bg-amber-100 flex items-center gap-1"><i class="fa-solid fa-qrcode"></i> 二维码吊牌</button>
-                            <div class="space-x-2">
-                                <button @click="openProductModal(p)" class="text-xs text-blue-600 hover:underline">编辑</button>
-                                <button @click="deleteProduct(p.id)" class="text-xs text-red-600 hover:underline">删除</button>
+                        <div class="p-2.5 space-y-1.5">
+                            <p class="text-xs font-mono font-semibold text-gray-800 truncate" :title="p.sku">{{ p.sku }}</p>
+                            <p class="text-xs text-gray-400" v-if="p.size_range">{{ p.size_range }}码</p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-bold text-emerald-600">${{ p.price }}</span>
+                                <button @click="showQRTag(p)" class="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded hover:bg-amber-100"><i class="fa-solid fa-qrcode"></i></button>
+                            </div>
+                            <div class="flex items-center justify-between pt-1 border-t border-gray-50">
+                                <button @click="openProductModal(p)" class="text-[10px] text-blue-600 hover:underline">编辑</button>
+                                <button @click="deleteProduct(p.id)" class="text-[10px] text-red-600 hover:underline">删除</button>
                             </div>
                         </div>
                     </div>

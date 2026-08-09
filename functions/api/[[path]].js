@@ -131,7 +131,16 @@ export async function onRequest(context) {
                 }
                 if (!sku) { sku = String(Math.floor(100000 + Math.random() * 900000)); }
 
-                // Extract Title
+                // Extract size range (尺码: 35-45, size: 36-44, etc.)
+                let sizeRange = '';
+                const sizeMatch = html.match(/(?:尺码|鞋码|尺\s*码|码数|size|码段)[\s：:]*<\/?\w+[^>]*>?\s*(\d{2})\s*[-~–—]\s*(\d{2})/i) ||
+                                  html.match(/<t[dh][^>]*>[\s]*(?:尺码|鞋码|码数|size)[\s]*<\/t[dh]>\s*<t[dh][^>]*>[\s]*(\d{2})\s*[-~–—]\s*(\d{2})/i) ||
+                                  html.match(/(\d{2})\s*[-~–—]\s*(\d{2})\s*(?:码|size|尺码)/i);
+                if (sizeMatch) {
+                    sizeRange = sizeMatch[1] + '-' + sizeMatch[2];
+                }
+
+                // Extract Title - keep for backward compat but not primary display
                 const titleMatch = html.match(/<title>(.*?)<\/title>/i) || html.match(/meta property="og:title" content="(.*?)"/i);
                 if (titleMatch) {
                     name = titleMatch[1].replace(/-1688\.com|-阿里巴巴|-搜鞋网|sooxie\.com/gi, '').trim();
@@ -392,6 +401,7 @@ export async function onRequest(context) {
                         priceRMB: finalRMB,
                         price: finalUSD,
                         image_url: image_url,
+                        size_range: sizeRange || '',
                         category: name.includes('拖鞋') ? '凉拖鞋' : (name.includes('帆布') ? '休闲鞋' : '跑鞋'),
                         upper_material: name.includes('飞织') ? '透气飞织' : (name.includes('皮') ? '头层牛皮/PU' : '网布'),
                         sole_material: 'MD+橡胶底',
