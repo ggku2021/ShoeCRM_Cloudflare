@@ -341,6 +341,36 @@ export async function onRequest(context) {
                                 const oid = offer?.offerId || offer?.offer_id || pdata?.detail?.offerId || pdata?.offerId;
                                 if (oid) sku = String(oid);
                             }
+                            if (!sizeRange) {
+                                // Extract size from 1688 skuProps: 尺码:["35","36"...] values
+                                const props = offer?.skuProps || pdata?.skuProps || pdata?.globalData?.skuModel?.skuProps || pdata?.detail?.skuProps || [];
+                                for (const prop of props) {
+                                    if (prop.prop && /尺码|码数|size|鞋码/i.test(prop.prop)) {
+                                        const vals = prop.value || prop.values || [];
+                                        if (Array.isArray(vals) && vals.length > 0) {
+                                            const nums = vals.map(v => parseInt(v.name || v)).filter(n => n >= 30 && n <= 50);
+                                            if (nums.length >= 2) {
+                                                sizeRange = Math.min(...nums) + '-' + Math.max(...nums);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if (!sizeRange) {
+                                // Fallback: check skuInfo keys for size patterns (e.g. sku keys like "黑色;35")
+                                const si = offer?.skuInfo || pdata?.detail?.skuInfo || {};
+                                const siKeys = Object.keys(si);
+                                const sizes = [];
+                                for (const k of siKeys) {
+                                    const parts = k.split(/[;,;，]/);
+                                    for (const part of parts) {
+                                        const n = parseInt(part.trim());
+                                        if (n >= 30 && n <= 50) sizes.push(n);
+                                    }
+                                }
+                                if (sizes.length >= 2) sizeRange = Math.min(...sizes) + '-' + Math.max(...sizes);
+                            }
                         } catch(e) {}
                     }
                 }
