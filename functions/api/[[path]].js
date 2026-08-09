@@ -57,7 +57,10 @@ export async function onRequest(context) {
                 return new Response(JSON.stringify({
                     status: 'db_error',
                     message: 'D1 数据库查询失败: ' + dbErr.message,
-                    sql_fix: '请在 Cloudflare D1 控制台运行: CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, sku TEXT, name TEXT, category TEXT, upper_material TEXT, sole_material TEXT, price REAL, moq INTEGER, target_market TEXT, tags TEXT, image_url TEXT);'
+                    sql_fix: '请在 Cloudflare D1 控制台运行: CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, sku TEXT, name TEXT, category TEXT, upper_material TEXT, sole_material TEXT, price REAL, moq INTEGER, target_market TEXT, tags TEXT, image_url TEXT, size_range TEXT); + 
+                    // Auto-migrate: add size_range column if missing
+                    await env.DB.prepare("ALTER TABLE products ADD COLUMN size_range TEXT DEFAULT ''").run().catch(() => {});
+                '
                 }), { status: 500, headers });
             }
         }
@@ -106,22 +109,30 @@ export async function onRequest(context) {
                     const kvM = html.match(/(?:货号|款号|编号|article|style)\s*[：:]\s*([A-Za-z0-9\-_.\/]{3,30})/i);
                     if (kvM) sku = kvM[1].trim();
                 }
-                // Priority 2: 1688 attributes
+                // Priority 2: 1688 attributes (enhanced extraction)
                 if (!sku) {
-                    // 1688 data-offer-id (most reliable)
-                    const offerId = html.match(/data-(?:offer|item)-?id=["'](\d+)["']/i);
+                    // 1688 data-offer-id or offerid in URL/script
+                    const offerId = html.match(/data-(?:offer|item)-?id=["'](\d+)["']/i) ||
+                                    html.match(/"offerId"\s*:\s*"?(\d+)"?/i) ||
+                                    html.match(/"offerid"\s*:\s*"?(\d+)"?/i) ||
+                                    html.match(/offerId\s*=\s*['"](\d+)['"]/i) ||
+                                    html.match(/offer_id\s*:\s*"?(\d+)"?/i);
                     if (offerId) sku = offerId[1];
                 }
                 if (!sku) {
-                    // 1688 table attributes: rows containing "货号" or "产品货号"
-                    const attrRow = html.match(/<tr[^>]*>\s*<t[dh][^>]*>\s*(?:货\s*号|产品货号|货品编号)\s*<\/t[dh]>\s*<t[dh][^>]*>\s*([^<\s]{3,30})\s*<\/t[dh]>/i);
+                    // 1688 product attribute table - flexible matching
+                    const attrRow = html.match(/<t[dh][^>]*>\s*(?:货\s*号|产品货号|货品编号|商品货号)\s*<\/t[dh]>\s*<t[dh][^>]*>\s*([^<\s]{3,30})\s*<\/t[dh]>/i);
                     if (attrRow) sku = attrRow[1].replace(/<[^>]+>/g, '').trim();
                 }
                 if (!sku) {
-                    // Any data attribute with art/item/style number
+                    // 1688 feature list: li or div with 货号 label
+                    const featMatch = html.match(/(?:货\s*号|产品货号|货品编号)\s*[：:]\s*([A-Za-z0-9\-\_\.]{3,30})/i);
+                    if (featMatch) sku = featMatch[1].trim();
+                }
+                if (!sku) {
+                    // Any data attribute with art/item/style/product number
                     const dM = html.match(/data-(?:art|article|item|style|product)-?no=["']([^"']+)["']/i) ||
-                               html.match(/"货号"\s*:\s*"([^"]+)"/i) ||
-                               html.match(/货\s*号\s*[：:]\s*([^\s<,，]{3,30})/i);
+                               html.match(/"货号"\s*:\s*"([^"]+)"/i);
                     if (dM) sku = dM[1].trim();
                 }
                 // Priority 3: yupoo - extract SKU from image filename
@@ -481,7 +492,7 @@ export async function onRequest(context) {
                 try {
                     const res = await env.DB.prepare(
                         `INSERT INTO quotes (company, date, sku, price, qty, express_no, status, feedback, sales_rep) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                     ).bind(
                         b.company || '买家自主选款',
                         b.date || new Date().toISOString().split('T')[0],
@@ -563,7 +574,7 @@ export async function onRequest(context) {
                 const b = await getJsonBody();
                 const res = await env.DB.prepare(
                     `INSERT INTO followups (company, date, channel, notes, interest, next_date, action, status, sales_rep) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 ).bind(
                     b.company || '', b.date || new Date().toISOString().split('T')[0],
                     b.channel || 'WhatsApp', b.notes || '', b.interest || '中',
@@ -591,7 +602,7 @@ export async function onRequest(context) {
                 const b = await getJsonBody();
                 const res = await env.DB.prepare(
                     `INSERT INTO quotes (company, date, sku, price, qty, express_no, status, feedback, sales_rep) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 ).bind(
                     b.company || '', b.date || new Date().toISOString().split('T')[0],
                     b.sku || '', Number(b.price) || 0, Number(b.qty) || 1000,
@@ -611,6 +622,8 @@ export async function onRequest(context) {
 
         // 8. Products Endpoint
         if (path === '/api/products') {
+            // Auto-migrate: ensure size_range column exists
+            if (env.DB) await env.DB.prepare("ALTER TABLE products ADD COLUMN size_range TEXT DEFAULT ''").run().catch(() => {});
             if (method === 'GET') {
                 try {
                     const { results } = await env.DB.prepare('SELECT * FROM products ORDER BY id DESC').all();
@@ -631,22 +644,24 @@ export async function onRequest(context) {
                 try {
                     if (isUpdate) {
                         await env.DB.prepare(
-                            `UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=?, image_url=? WHERE id=? OR sku=?`
+                            `UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=?, image_url=?, size_range=? WHERE id=? OR sku=?`
                         ).bind(
                             b.sku || '', b.name || '', b.category || '跑鞋',
                             b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
                             Number(b.moq) || 1000, b.target_market || '', b.tags || '',
-                            b.image_url || '', numId, b.sku || ''
+                            b.size_range || '',
+                            b.image_url || '', b.size_range || '', numId, b.sku || ''
                         ).run();
                         return new Response(JSON.stringify({ success: true, id: numId }), { headers });
                     } else {
                         const res = await env.DB.prepare(
-                            `INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url) 
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                            `INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url, size_range) 
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                         ).bind(
                             b.sku || '', b.name || '', b.category || '跑鞋',
                             b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
                             Number(b.moq) || 1000, b.target_market || '', b.tags || '',
+                            b.size_range || '',
                             b.image_url || ''
                         ).run();
                         const lastId = res && res.meta && res.meta.last_row_id ? res.meta.last_row_id : Date.now();
@@ -656,21 +671,22 @@ export async function onRequest(context) {
                     try {
                         if (isUpdate) {
                             await env.DB.prepare(
-                                `UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=? WHERE id=? OR sku=?`
+                                `UPDATE products SET sku=?, name=?, category=?, upper_material=?, sole_material=?, price=?, moq=?, target_market=?, tags=?, size_range=? WHERE id=? OR sku=?`
                             ).bind(
                                 b.sku || '', b.name || '', b.category || '跑鞋',
                                 b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
-                                Number(b.moq) || 1000, b.target_market || '', b.tags || '', numId, b.sku || ''
+                                Number(b.moq) || 1000, b.target_market || '', b.tags || '', b.size_range || '', numId, b.sku || ''
                             ).run();
                             return new Response(JSON.stringify({ success: true, id: numId }), { headers });
                         } else {
                             const res = await env.DB.prepare(
-                                `INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags) 
-                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                                `INSERT INTO products (sku, name, category, upper_material, sole_material, price, moq, target_market, tags, size_range) 
+                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
                             ).bind(
                                 b.sku || '', b.name || '', b.category || '跑鞋',
                                 b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
-                                Number(b.moq) || 1000, b.target_market || '', b.tags || ''
+                                Number(b.moq) || 1000, b.target_market || '', b.tags || '',
+                            b.size_range || ''
                             ).run();
                             return new Response(JSON.stringify({ success: true, id: res.meta ? res.meta.last_row_id : Date.now() }), { headers });
                         }
