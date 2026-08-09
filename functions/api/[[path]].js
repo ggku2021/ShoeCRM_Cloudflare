@@ -57,8 +57,7 @@ export async function onRequest(context) {
                 return new Response(JSON.stringify({
                     status: 'db_error',
                     message: 'D1 数据库查询失败: ' + dbErr.message,
-                    sql_fix: '请在 Cloudflare D1 控制台运行: CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, sku TEXT, name TEXT, category TEXT, upper_material TEXT, sole_material TEXT, price REAL, moq INTEGER, target_market TEXT, tags TEXT, image_url TEXT, size_range TEXT); + 
-'
+                    sql_fix: '请在 Cloudflare D1 控制台运行: CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, sku TEXT, name TEXT, category TEXT, upper_material TEXT, sole_material TEXT, price REAL, moq INTEGER, target_market TEXT, tags TEXT, image_url TEXT, size_range TEXT);'
                 }), { status: 500, headers });
             }
         }
