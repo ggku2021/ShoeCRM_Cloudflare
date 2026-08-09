@@ -519,13 +519,16 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                    <div v-for="p in products" :key="p.id" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group">
+                    <div v-for="p in filteredProducts" :key="p.id" :class="['bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition group', selectedProductIds.includes(p.id) ? 'border-blue-400 ring-1 ring-blue-300' : 'border-gray-100']">
                         <div class="relative aspect-square w-full bg-gray-100 overflow-hidden cursor-pointer" @click="previewImage(p)">
                             <img :src="p.image_url || 'https://via.placeholder.com/400x400?text=No+Image'" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <label class="absolute top-2 left-2 flex items-center gap-1.5 bg-white/90 rounded-full px-2.5 py-1.5 border shadow-sm cursor-pointer z-10" @click.stop>
+                                <input type="checkbox" :value="p.id" v-model="selectedProductIds" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span class="text-[10px] font-mono font-semibold text-gray-700">{{ p.sku }}</span>
+                            </label>
                         </div>
-                        <div class="p-2.5 space-y-1.5">
-                            <p class="text-xs font-mono font-semibold text-gray-800 truncate" :title="p.sku">{{ p.sku }}</p>
-                            <p class="text-xs text-gray-400" v-if="p.size_range">{{ p.size_range }}码</p>
+                        <div class="p-2.5 space-y-1.5 pt-1">
+                            <p class="text-xs text-gray-400" v-if="p.size_range">{{ p.size_range }}碼</p>
                             <div class="flex items-center justify-between">
                                 <span class="text-sm font-bold text-emerald-600">${{ p.price }}</span>
                                 <button @click="showQRTag(p)" class="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded hover:bg-amber-100"><i class="fa-solid fa-qrcode"></i></button>
@@ -1061,7 +1064,7 @@
                     showLookbookExportModal: false, showClientCartPIModal: false,
                     lookbookSelectedSKUs: [], clientCart: [], lookbookHidePrice: false, lookbookSearch: '', lookbookCategory: '',
                     selectedQuoteDetail: {}, selectedQRProduct: {}, selectedMatchCustomer: {}, matchedProducts: [],
-                    exhibitionTargetCustomer: '', exhibitionSelectedSKU: '', exhibitionCart: [],
+                    exhibitionTargetCustomer: '', exhibitionSelectedSKU: '', exhibitionCart: [], productSearch: '', selectedProductIds: [],
                     isCameraActive: false, html5QrCode: null, selectedProductToAdd: null, exchangeRateMsg: '',
                     clientPIForm: { piNumber: 'REQ-' + Math.floor(100000 + Math.random() * 900000), date: new Date().toISOString().split('T')[0], company: '', contact: '' },
                     calcPricing: { factoryCost: 80, rebateRate: 13, vatRate: 13, exchangeRate: 7.20, portFee: 2.5, margin: 15 },
@@ -1073,6 +1076,14 @@
                 }
             },
             computed: {
+                filteredProducts() {
+                    if (!this.productSearch) return this.products;
+                    const q = this.productSearch.toLowerCase();
+                    return this.products.filter(p =>
+                        (p.sku && p.sku.toLowerCase().includes(q)) ||
+                        (p.name && p.name.toLowerCase().includes(q))
+                    );
+                },
                 getLevelBadgeClass() {
                     return (level) => {
                         if (level === 'VIP') return 'bg-purple-100 text-purple-800';
@@ -1234,6 +1245,21 @@ Footwear Export Co., Ltd.`;
                 }
             },
             methods: {
+                toggleSelectAll(e) {
+                    if (e.target.checked) {
+                        this.selectedProductIds = this.filteredProducts.map(p => p.id);
+                    } else {
+                        this.selectedProductIds = [];
+                    }
+                },
+                async batchDelete() {
+                    if (!confirm('确定要删除选中的 ' + this.selectedProductIds.length + ' 个鞋款吗？此操作不可撤销。')) return;
+                    for (const id of this.selectedProductIds) {
+                        await this.apiFetch('/api/products/' + id, { method: 'DELETE' }).catch(() => {});
+                    }
+                    this.selectedProductIds = [];
+                    await this.fetchAllData();
+                },
                 updateScrapedUSD() {
                     const rmb = this.scrapedProduct.priceRMB || 0;
                     const rate = this.calcPricing.exchangeRate || 7.20;
