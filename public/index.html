@@ -645,7 +645,26 @@
 
             </div>
 
-        </main>
+        
+<div v-if="showQRModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl max-w-sm w-full p-6 text-center space-y-4">
+                <div id="tag-printable" class="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-white">
+                    <h3 class="font-bold text-lg text-slate-800">{{ selectedQRProduct.name }}</h3>
+                    <p class="text-xs text-gray-500 font-mono mt-1">SKU: {{ selectedQRProduct.sku }}</p>
+                    <div class="my-4 flex justify-center">
+                        <img :src="qrCodeUrl" class="w-40 h-40 border p-1 rounded" />
+                    </div>
+                    <p class="text-xs text-gray-600"><strong>Upper:</strong> {{ selectedQRProduct.upper_material }}</p>
+                    <p class="text-xs text-gray-600"><strong>Outsole:</strong> {{ selectedQRProduct.sole_material }}</p>
+                    <p class="text-sm font-bold text-emerald-600 mt-2">FOB Price: ${{ selectedQRProduct.price }} / PR</p>
+                </div>
+                <div class="flex gap-2 no-print">
+                    <button @click="printQRTag" class="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium">打印吊牌</button>
+                    <button @click="showQRModal = false" class="px-4 py-2 border rounded-lg text-gray-600 text-sm">关闭</button>
+                </div>
+            </div>
+        
+</main>
 
         <div v-if="isPublicCatalogMode && clientCart.length > 0" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-40 px-4 py-3 flex items-center justify-between gap-3">
             <div class="flex items-center gap-3 min-w-0">
@@ -1022,24 +1041,7 @@
             </div>
         </div>
 
-                <div v-if="showQRModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-xl max-w-sm w-full p-6 text-center space-y-4">
-                <div id="tag-printable" class="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-white">
-                    <h3 class="font-bold text-lg text-slate-800">{{ selectedQRProduct.name }}</h3>
-                    <p class="text-xs text-gray-500 font-mono mt-1">SKU: {{ selectedQRProduct.sku }}</p>
-                    <div class="my-4 flex justify-center">
-                        <img :src="qrCodeUrl" class="w-40 h-40 border p-1 rounded" />
-                    </div>
-                    <p class="text-xs text-gray-600"><strong>Upper:</strong> {{ selectedQRProduct.upper_material }}</p>
-                    <p class="text-xs text-gray-600"><strong>Outsole:</strong> {{ selectedQRProduct.sole_material }}</p>
-                    <p class="text-sm font-bold text-emerald-600 mt-2">FOB Price: ${{ selectedQRProduct.price }} / PR</p>
                 </div>
-                <div class="flex gap-2 no-print">
-                    <button @click="printQRTag" class="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium">打印吊牌</button>
-                    <button @click="showQRModal = false" class="px-4 py-2 border rounded-lg text-gray-600 text-sm">关闭</button>
-                </div>
-            </div>
-        </div>
 
     </div>
 
