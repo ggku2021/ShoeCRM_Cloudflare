@@ -160,11 +160,47 @@ export async function onRequest(context) {
 
                 // Extract size range (尺码: 35-45, size: 36-44, etc.)
                 let sizeRange = '';
+                // Pattern 1: 尺码 label followed by range 35-45 (with optional HTML)
                 const sizeMatch = html.match(/(?:尺码|鞋码|尺\s*码|码数|size|码段)[\s：:]*<\/?\w+[^>]*>?\s*(\d{2})\s*[-~–—]\s*(\d{2})/i) ||
+                                  // Pattern 2: table cell with 尺码 header
                                   html.match(/<t[dh][^>]*>[\s]*(?:尺码|鞋码|码数|size)[\s]*<\/t[dh]>\s*<t[dh][^>]*>[\s]*(\d{2})\s*[-~–—]\s*(\d{2})/i) ||
+                                  // Pattern 3: bare number range followed by unit indicator
                                   html.match(/(\d{2})\s*[-~–—]\s*(\d{2})\s*(?:码|size|尺码)/i);
                 if (sizeMatch) {
                     sizeRange = sizeMatch[1] + '-' + sizeMatch[2];
+                }
+                // Pattern 4: Attribute/Detail table row on 1688: <tr><td>尺码</td><td>35,36,37,38,39,40,41,42,43,44,45</td></tr>
+                if (!sizeRange) {
+                    const attrMatch = html.match(/<tr[^>]*>[\s\S]*?(?:尺码|鞋码|码数|size)[\s\S]*?<\/tr>/i);
+                    if (!attrMatch) {
+                        // Try broader: any td containing 尺码 followed by another td with numbers
+                        const tdMatch = html.match(/<t[dh][^>]*>[\s]*(?:尺码|鞋码|码数|码段)[\s]*<\/t[dh]>\s*<t[dh][^>]*>[\s]*([\d,\s，、\/]{5,})[\s]*<\/t[dh]/i);
+                        if (tdMatch) {
+                            const nums = tdMatch[1].match(/\b(3\d|4[0-5])\b/g);
+                            if (nums && nums.length >= 2) {
+                                sizeRange = nums[0] + '-' + nums[nums.length - 1];
+                            }
+                        }
+                    } else {
+                        const nums = attrMatch[0].match(/\b(3\d|4[0-5])\b/g);
+                        if (nums && nums.length >= 2) {
+                            sizeRange = nums[0] + '-' + nums[nums.length - 1];
+                        }
+                    }
+                }
+                // Pattern 5: Generic attribute/feature list (div-based): 尺码:35,36,37,38,39,40,41,42,43,44,45 or 35 36 37 38 39 40 41 42 43 44 45 码
+                if (!sizeRange) {
+                    const genericMatch = html.match(/(?:尺码|鞋码|码数|码段|size)[\s：:]*<[^>]*>[\s]*<[^>]*>|<[^>]*>[\s]*<[^>]*>[\s]*(?:尺码|鞋码|码数|码段|size)/i);
+                    if (!genericMatch) {
+                        // Look for a sequence of shoe-sized numbers (34-45 range, at least 5 consecutive)
+                        const numSeq = html.match(/\b((?:3[4-9]|4[0-5])\s*[,，、\/\-]?\s*){4,}(?:3[4-9]|4[0-5])\b/g);
+                        if (numSeq) {
+                            const nums = numSeq[0].match(/\b(3[4-9]|4[0-5])\b/g);
+                            if (nums && nums.length >= 4) {
+                                sizeRange = nums[0] + '-' + nums[nums.length - 1];
+                            }
+                        }
+                    }
                 }
 
                 // Extract Title - keep for backward compat but not primary display
@@ -343,16 +379,36 @@ export async function onRequest(context) {
                             }
                             if (!sizeRange) {
                                 // Extract size from 1688 skuProps: 尺码:["35","36"...] values
-                                const props = offer?.skuProps || pdata?.skuProps || pdata?.globalData?.skuModel?.skuProps || pdata?.detail?.skuProps || [];
+                                // Try multiple paths: offer.skuProps, skuModel.productSKUPropertyList, globalData.skuModel
+                                const props = offer?.skuProps || pdata?.skuProps 
+                                    || pdata?.globalData?.skuModel?.skuProps || pdata?.globalData?.skuModel?.productSKUPropertyList
+                                    || pdata?.detail?.skuProps || pdata?.skuModel?.skuProps || pdata?.skuModel?.productSKUPropertyList || [];
                                 for (const prop of props) {
-                                    if (prop.prop && /尺码|码数|size|鞋码/i.test(prop.prop)) {
-                                        const vals = prop.value || prop.values || [];
+                                    const propName = prop.prop || prop.name || prop.text || prop.propName || prop.label || '';
+                                    if (/尺码|鞋码|码数|size|尺\s*码|码段/i.test(propName)) {
+                                        const vals = prop.value || prop.values || prop.entries || [];
                                         if (Array.isArray(vals) && vals.length > 0) {
-                                            const nums = vals.map(v => parseInt(v.name || v)).filter(n => n >= 30 && n <= 50);
+                                            const nums = vals.map(v => parseInt(v.name || v.value || v)).filter(n => n >= 30 && n <= 50);
                                             if (nums.length >= 2) {
                                                 sizeRange = Math.min(...nums) + '-' + Math.max(...nums);
                                                 break;
                                             }
+                                        }
+                                    }
+                                }
+                            }
+                            if (!sizeRange) {
+                                // Try string-based prop values (e.g. prop: {value: "35,36,37,38,39,40,41,42,43,44,45"})
+                                const props2 = offer?.skuProps || pdata?.skuProps || pdata?.globalData?.skuModel?.skuProps || pdata?.detail?.skuProps || [];
+                                for (const prop of props2) {
+                                    const pname = prop.prop || prop.name || '';
+                                    if (/尺码|鞋码|码数|size|尺\s*码|码段/i.test(pname)) {
+                                        const rawVal = prop.value || prop.values || prop.text || '';
+                                        const strVal = Array.isArray(rawVal) ? rawVal.map(v => v.name || v.value || v).join(',') : String(rawVal);
+                                        const nums = strVal.match(/(3\d|4[0-5])/g);
+                                        if (nums && nums.length >= 2) {
+                                            sizeRange = nums[0] + '-' + nums[nums.length - 1];
+                                            break;
                                         }
                                     }
                                 }
