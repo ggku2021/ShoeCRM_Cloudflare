@@ -677,7 +677,7 @@ export async function onRequest(context) {
                             b.upper_material || '', b.sole_material || '', Number(b.price) || 0,
                             Number(b.moq) || 1000, b.target_market || '', b.tags || '',
                             b.image_url || '',
-                            b.size_range || '', numId, b.sku || '''
+                            b.size_range || '', numId, b.sku || ''
                         ).run();
                         return new Response(JSON.stringify({ success: true, id: numId }), { headers });
                     } else {
