@@ -92,62 +92,31 @@ export async function onRequest(context) {
                 let priceRMB = 0;
                 let sku = '';
 
-                // Extract SKU / 货号 from page content (no platform prefix)
-                // Priority 1: Extract from JSON-LD (productID, sku, mpn)
-                if (jsonLdData && jsonLdData.sku) {
-                    sku = String(jsonLdData.sku).trim();
-                }
-                if (!sku && jsonLdData && jsonLdData.productID) {
-                    sku = String(jsonLdData.productID).trim();
-                }
-
-                // Priority 2: sooxie - extract "货号" / "款号" / "编号" field from page
+                // Extract SKU / 货号: Priority from page content, no platform prefix
+                // Priority 1: sooxie "货号"/"款号" field
                 if (!sku) {
-                    const artnoLabels = html.match(/(?:货[号號]|款[号號]|商品编号|商品货号|商品款号|产品编号|编号|article\s*no|item\s*no|style\s*no)[\s：:]*<\/?\w+[^>]*>?\s*([A-Za-z0-9\-_./]+)/i);
-                    if (artnoLabels) {
-                        const val = artnoLabels[1].trim();
-                        if (val.length >= 3 && val.length <= 30 && !/^(?:jpg|png|gif|jpeg|webp|html|http)/i.test(val)) {
-                            sku = val;
-                        }
-                    }
+                    const artnoM = html.match(/(?:货号|款号|商品编号|商品货号|产品编号|编号|article\s*no|item\s*no|style\s*no)[\s，：:]*<\/?\w+[^>]*>?\s*([A-Za-z0-9\-_.\/]+)/i);
+                    if (artnoM) { const v = artnoM[1].trim(); if (v.length >= 3 && v.length <= 30 && !/^(?:jpg|png|gif|jpeg|webp|html|http)/i.test(v)) sku = v; }
                 }
-                // Try td-based layout: <td>货号</td><td>XXX</td>
                 if (!sku) {
-                    const tdMatch = html.match(/<t[dh][^>]*>[\s]*(?:货[号號]|款[号號]|编号)[\s]*<\/t[dh]>\s*<t[dh][^>]*>\s*([^<\s]{3,30})\s*<\/t[dh]>/i);
-                    if (tdMatch) {
-                        sku = tdMatch[1].replace(/<[^>]+>/g, '').trim();
-                    }
+                    const tdM = html.match(/<t[dh][^>]*>[\s]*(?:货号|款号|编号)[\s]*<\/t[dh]>\s*<t[dh][^>]*>\s*([^<\s]{3,30})\s*<\/t[dh]>/i);
+                    if (tdM) sku = tdM[1].replace(/<[^>]+>/g, '').trim();
                 }
-                // Try simple key-value: 货号：XXX or 款号: XXX
                 if (!sku) {
-                    const kvMatch = html.match(/(?:货[号號]|款[号號]|编号|article|style)\s*[：:]\s*([A-Za-z0-9\-_./]{3,30})/i);
-                    if (kvMatch) sku = kvMatch[1].trim();
+                    const kvM = html.match(/(?:货号|款号|编号|article|style)\s*[：:]\s*([A-Za-z0-9\-_.\/]{3,30})/i);
+                    if (kvM) sku = kvM[1].trim();
                 }
-
-                // Priority 3: 1688 - extract "货号" from product attributes / iDetailData
+                // Priority 2: 1688 data attributes
                 if (!sku) {
-                    // Try 1688 data attributes
-                    const dataArtNo = html.match(/data-(?:art|article|item|style)-?no=["']([^"']+)["']/i) ||
-                                      html.match(/"货号"\s*:\s*"([^"]+)"/i) ||
-                                      html.match(/货\s*号\s*[：:]\s*([^\s<,，]{3,30})/i);
-                    if (dataArtNo) sku = dataArtNo[1].trim();
+                    const dM = html.match(/data-(?:art|article|item|style)-?no=["']([^"']+)["']/i) || html.match(/"货号"\s*:\s*"([^"]+)"/i) || html.match(/货\s*号\s*[：:]\s*([^\s<,，]{3,30})/i);
+                    if (dM) sku = dM[1].trim();
                 }
-
-                // Priority 4: Fallback - extract numeric ID from URL (no prefix)
+                // Priority 3: Fallback URL ID (no prefix)
                 if (!sku) {
-                    if (targetUrl.includes('1688.com')) {
-                        const match = targetUrl.match(/offer\/(\d+)\.html/);
-                        if (match) sku = match[1];
-                    } else if (targetUrl.includes('sooxie.com')) {
-                        const match = targetUrl.match(/detail\/(\d+)/) || targetUrl.match(/(\d+)\.html/) || targetUrl.match(/id=(\d+)/);
-                        if (match) sku = match[1];
-                    }
+                    if (targetUrl.includes('1688.com')) { const m = targetUrl.match(/offer\/(\d+)\.html/); if (m) sku = m[1]; }
+                    else if (targetUrl.includes('sooxie.com')) { const m = targetUrl.match(/detail\/(\d+)/) || targetUrl.match(/(\d+)\.html/) || targetUrl.match(/id=(\d+)/); if (m) sku = m[1]; }
                 }
-
-                // Final fallback
-                if (!sku) {
-                    sku = String(Math.floor(100000 + Math.random() * 900000));
-                }
+                if (!sku) { sku = String(Math.floor(100000 + Math.random() * 900000)); }
 
                 // Extract Title
                 const titleMatch = html.match(/<title>(.*?)<\/title>/i) || html.match(/meta property="og:title" content="(.*?)"/i);
@@ -164,6 +133,10 @@ export async function onRequest(context) {
                     try { jsonLdData = JSON.parse(jsonLdMatch[1]); } catch(e) {}
                 }
                 if (jsonLdData) {
+                // Extract SKU from JSON-LD structured data
+                if (!sku && jsonLdData.sku) { sku = String(jsonLdData.sku).trim(); }
+                if (!sku && jsonLdData.productID) { sku = String(jsonLdData.productID).trim(); }
+
                     if (!raw_image_url && jsonLdData.image) {
                         raw_image_url = Array.isArray(jsonLdData.image) ? jsonLdData.image[0] : jsonLdData.image;
                     }
