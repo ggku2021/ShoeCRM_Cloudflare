@@ -300,7 +300,7 @@
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                     <div v-for="p in filteredLookbookProducts" :key="p.id" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition group cursor-pointer" @click="previewImage(p)">
                         <div class="relative aspect-square w-full bg-slate-100 overflow-hidden">
-                            <img :src="p.image_url || 'https://via.placeholder.com/400x400?text=No+Image'" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <img :src="p.image_url || 'https://via.placeholder.com/400x400?text=No+Image'" @error="handleImageError" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
                             <button v-if="!isPublicCatalogMode" @click.stop="toggleLookbookSelection(p.sku)" :class="['absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center transition shadow text-xs', isLookbookSelected(p.sku) ? 'bg-teal-500 text-white' : 'bg-white/90 text-teal-600']"><i class="fa-solid fa-check"></i></button>
                             <button v-else @click.stop="toggleClientCart(p)" :class="['absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold shadow transition', isClientCartSelected(p.sku) ? 'bg-teal-500 text-white' : 'bg-white/90 text-teal-600']"><i class="fa-solid" :class="isClientCartSelected(p.sku) ? 'fa-check' : 'fa-plus'"></i></button>
                         </div>
@@ -551,7 +551,7 @@
 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                     <div v-for="p in filteredProducts" :key="p.id" :class="['bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition group', selectedProductIds.includes(p.id) ? 'border-blue-400 ring-1 ring-blue-300' : 'border-gray-100']">
                         <div class="relative aspect-square w-full bg-gray-100 overflow-hidden cursor-pointer" @click="previewImage(p)">
-                            <img :src="p.image_url || 'https://via.placeholder.com/400x400?text=No+Image'" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <img :src="p.image_url || 'https://via.placeholder.com/400x400?text=No+Image'" @error="handleImageError" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
                             <label class="absolute top-2 left-2 flex items-center gap-1.5 bg-white/90 rounded-full px-2.5 py-1.5 border shadow-sm cursor-pointer z-10" @click.stop>
                                 <input type="checkbox" :value="p.id" v-model="selectedProductIds" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                 <span class="text-[10px] font-mono font-semibold text-gray-700">{{ p.sku }}</span>
@@ -1692,14 +1692,17 @@ Footwear Export Co., Ltd.`;
                     this.isLoggedIn = false;
                     await this.fetchPublicProducts();
                     const urlParams2 = new URLSearchParams(window.location.search);
+                    // 支持 sku=XXX（单个，扫码QR码使用）和 skus=XXX,YYY（多个，分享链接使用）
+                    const singleSku = urlParams2.get('sku');
                     const skusParam = urlParams2.get('skus');
-                    if (skusParam) {
-                        const skus = skusParam.split(',').map(s => s.trim());
-                        for (const sku of skus) {
-                            const product = this.products.find(p => p.sku === sku);
-                            if (product && !this.clientCart.some(x => x.sku === sku)) {
-                                this.clientCart.push({ ...product, qty: product.moq || 1000 });
-                            }
+                    const allSkus = [];
+                    if (singleSku) allSkus.push(singleSku.trim());
+                    if (skusParam) allSkus.push(...skusParam.split(',').map(s => s.trim()));
+                    for (const sku of allSkus) {
+                        if (!sku) continue;
+                        const product = this.products.find(p => p.sku === sku);
+                        if (product && !this.clientCart.some(x => x.sku === sku)) {
+                            this.clientCart.push({ ...product, qty: product.moq || 1000 });
                         }
                     }
                 },
