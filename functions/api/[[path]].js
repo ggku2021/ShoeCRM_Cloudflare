@@ -696,6 +696,18 @@ export async function onRequest(context) {
                 await env.DB.prepare('DELETE FROM customers WHERE id = ?').bind(id).run();
                 return new Response(JSON.stringify({ success: true }), { headers });
             }
+            if (method === 'PUT') {
+                const b = await getJsonBody();
+                await env.DB.prepare(
+                    `UPDATE customers SET company=?, country=?, contact=?, contact_info=?, level=?, channel=?, date=?, stage=?, preferred_styles=?, preferences=?, target_price=?, target_market=?, moq=?, sales_rep=?, notes=? WHERE id=?`
+                ).bind(
+                    b.company || '', b.country || '', b.contact || '', b.contact_info || '',
+                    b.level || 'VIP', b.channel || '展会', b.date || '',
+                    b.stage || '初次接触', b.preferred_styles || '', b.preferences || '',
+                    b.target_price || '', b.target_market || '', b.moq || '', b.sales_rep || '', b.notes || '', id
+                ).run();
+                return new Response(JSON.stringify({ success: true }), { headers });
+            }
         }
 
         // 6. Followups Endpoint

@@ -373,6 +373,7 @@
                             <div class="flex items-center justify-between text-xs pt-1 mb-3">
                                 <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded font-medium">{{ c.stage }}</span>
                                 <div class="space-x-2">
+                                    <button @click="editCustomer(c)" class="text-blue-600 hover:underline">编辑</button>
                                     <button @click="deleteCustomer(c.id)" class="text-red-600 hover:underline">删除</button>
                                 </div>
                             </div>
@@ -986,10 +987,65 @@
         </div>
 
         <div v-if="showCustomerModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-xl max-w-lg w-full p-6">
-                <h3 class="font-bold text-gray-800 mb-4">新增/编辑客户档案</h3>
-                <input type="text" v-model="editingCustomer.company" placeholder="公司名称" class="w-full border p-2 rounded text-xs mb-3">
-                <div class="flex justify-end gap-2"><button @click="showCustomerModal = false" class="px-4 py-2 border rounded">取消</button><button @click="saveCustomer()" class="px-4 py-2 bg-blue-600 text-white rounded">保存</button></div>
+            <div class="bg-white rounded-xl max-w-lg w-full p-6 space-y-3 max-h-[90vh] overflow-y-auto">
+                <h3 class="font-bold text-gray-800 mb-2">{{ editingCustomer.id ? '编辑客户档案' : '新增客户档案' }}</h3>
+                <!-- 基本信息 -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="col-span-2"><label class="block text-xs font-semibold text-gray-600 mb-1">客户公司 *</label><input type="text" v-model="editingCustomer.company" placeholder="公司名称" class="w-full border p-2 rounded text-xs"></div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">国家/地区</label><input type="text" v-model="editingCustomer.country" placeholder="如 美国" class="w-full border p-2 rounded text-xs"></div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">联系人</label><input type="text" v-model="editingCustomer.contact" placeholder="联系人姓名" class="w-full border p-2 rounded text-xs"></div>
+                    <div class="col-span-2"><label class="block text-xs font-semibold text-gray-600 mb-1">联系方式</label><input type="text" v-model="editingCustomer.contact_info" placeholder="邮箱/电话/WhatsApp" class="w-full border p-2 rounded text-xs"></div>
+                </div>
+                <!-- 客户等级 & 渠道 -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">客户等级</label>
+                        <select v-model="editingCustomer.level" class="w-full border p-2 rounded text-xs">
+                            <option value="VIP">VIP</option>
+                            <option value="重点客户">重点客户</option>
+                            <option value="潜在客户">潜在客户</option>
+                            <option value="普通客户">普通客户</option>
+                            <option value="沉寂客户">沉寂客户</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">合作阶段</label>
+                        <select v-model="editingCustomer.stage" class="w-full border p-2 rounded text-xs">
+                            <option value="初次接触">初次接触</option>
+                            <option value="需求对接">需求对接</option>
+                            <option value="已寄样">已寄样</option>
+                            <option value="报价谈判">报价谈判</option>
+                            <option value="试单成交">试单成交</option>
+                            <option value="稳定复购">稳定复购</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">获客渠道</label><input type="text" v-model="editingCustomer.channel" placeholder="如 展会/阿里国际站" class="w-full border p-2 rounded text-xs"></div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">负责人</label><input type="text" v-model="editingCustomer.sales_rep" placeholder="销售负责人" class="w-full border p-2 rounded text-xs"></div>
+                </div>
+                <!-- 鞋款需求 -->
+                <div class="border-t pt-3">
+                    <p class="text-xs font-bold text-gray-500 mb-2">👟 鞋款需求信息</p>
+                    <div class="space-y-3">
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">偏好鞋款</label><input type="text" v-model="editingCustomer.preferred_styles" placeholder="如 跑鞋、飞织、帆布" class="w-full border p-2 rounded text-xs"></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">核心需求/偏好</label><input type="text" v-model="editingCustomer.preferences" placeholder="如 网布透气、轻量化EVA" class="w-full border p-2 rounded text-xs"></div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="block text-xs font-semibold text-gray-600 mb-1">目标价格</label><input type="text" v-model="editingCustomer.target_price" placeholder="如 $15-$22" class="w-full border p-2 rounded text-xs"></div>
+                            <div><label class="block text-xs font-semibold text-gray-600 mb-1">目标市场/码段</label><input type="text" v-model="editingCustomer.target_market" placeholder="如 US 7-12" class="w-full border p-2 rounded text-xs"></div>
+                        </div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">预期起订量</label><input type="text" v-model="editingCustomer.moq" placeholder="如 3000双/季" class="w-full border p-2 rounded text-xs"></div>
+                    </div>
+                </div>
+                <!-- 备注 -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">备注</label>
+                    <textarea v-model="editingCustomer.notes" rows="2" placeholder="其他备注信息" class="w-full border p-2 rounded text-xs"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2 border-t">
+                    <button @click="showCustomerModal = false" class="px-4 py-2 border rounded text-sm">取消</button>
+                    <button @click="saveCustomer()" class="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium">💾 保存</button>
+                </div>
             </div>
         </div>
 
@@ -1736,10 +1792,27 @@ Footwear Export Co., Ltd.`;
                     };
                     this.showCustomerModal = true;
                 },
+                editCustomer(c) {
+                    this.editingCustomer = { ...c };
+                    this.showCustomerModal = true;
+                },
                 async saveCustomer() {
                     if (!this.editingCustomer.company) return alert('请填写公司名称！');
-                    if (this.isDemoMode) this.customers.unshift({ id: Date.now(), ...this.editingCustomer });
-                    else { await this.apiFetch('/api/customers', { method: 'POST', body: this.editingCustomer }); await this.fetchAllData(); }
+                    if (this.isDemoMode) {
+                        if (this.editingCustomer.id) {
+                            const idx = this.customers.findIndex(x => x.id === this.editingCustomer.id);
+                            if (idx >= 0) this.customers.splice(idx, 1, { ...this.editingCustomer });
+                        } else {
+                            this.customers.unshift({ id: Date.now(), ...this.editingCustomer });
+                        }
+                    } else {
+                        if (this.editingCustomer.id) {
+                            await this.apiFetch('/api/customers/' + this.editingCustomer.id, { method: 'PUT', body: this.editingCustomer });
+                        } else {
+                            await this.apiFetch('/api/customers', { method: 'POST', body: this.editingCustomer });
+                        }
+                        await this.fetchAllData();
+                    }
                     this.showCustomerModal = false;
                 },
                 async deleteCustomer(id) { if (confirm('确定删除吗？')) { this.customers = this.customers.filter(x => x.id !== id); if (!this.isDemoMode) await this.apiFetch('/api/customers/' + id, { method: 'DELETE' }); } },
