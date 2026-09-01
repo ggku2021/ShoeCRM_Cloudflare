@@ -341,7 +341,7 @@ export async function onRequest(context) {
                         image_url = 'https://www.sooxie.com' + image_url;
                     }
                 } else {
-                    image_url = 'https://images.xiecdn.com/jinchen/texqjl2b6rdgrswajxh9fyqlmdrwdmko.jpg';
+                    // 不设统一fallback，让前端基于SKU生成唯一占位图
                 }
 
                 // 2. Price Extraction: Priority 1 - Match JS variable: var price="90.00"
