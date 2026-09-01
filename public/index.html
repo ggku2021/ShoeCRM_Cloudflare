@@ -1771,6 +1771,7 @@ Footwear Export Co., Ltd.`;
                     try {
                         this.customers = await this.apiFetch('/api/customers') || [];
                         this.followups = await this.apiFetch('/api/followups') || [];
+                        this.quotes = await this.apiFetch('/api/quotes') || [];
                         this.products = await this.apiFetch('/api/products') || [];
                     } catch (e) {}
                 },
