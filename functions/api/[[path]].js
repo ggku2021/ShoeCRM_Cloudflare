@@ -559,7 +559,7 @@ export async function onRequest(context) {
             } catch (e) {
                 try {
                     const { results } = await env.DB.prepare(
-                        'SELECT id, sku, name, category, price, upper_material, sole_material, moq, target_market, tags FROM products ORDER BY id DESC'
+                        'SELECT id, sku, name, category, price, upper_material, sole_material, moq, target_market, tags, image_url FROM products ORDER BY id DESC'
                     ).all();
                     return new Response(JSON.stringify(results || []), { headers });
                 } catch(err) {
@@ -775,7 +775,7 @@ export async function onRequest(context) {
                     const { results } = await env.DB.prepare('SELECT * FROM products ORDER BY id DESC').all();
                     return new Response(JSON.stringify(results || []), { headers });
                 } catch (e) {
-                    const { results } = await env.DB.prepare('SELECT id, sku, name, category, upper_material, sole_material, price, moq, target_market, tags FROM products ORDER BY id DESC').all();
+                    const { results } = await env.DB.prepare('SELECT id, sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url, size_range FROM products ORDER BY id DESC').all();
                     return new Response(JSON.stringify(results || []), { headers });
                 }
             }
