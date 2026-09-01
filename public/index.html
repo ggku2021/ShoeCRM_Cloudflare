@@ -430,6 +430,13 @@
                                     <button @click="exhibitionCart.splice(idx, 1)" class="text-red-500 text-sm"><i class="fa-solid fa-trash"></i></button>
                                 </div>
                             </div>
+                            <div v-if="exhibitionCart.length > 0" class="mt-4 pt-3 border-t flex items-center justify-between">
+                                <div class="text-sm text-gray-600">合计 <strong>{{ exhibitionCart.length }}</strong> 款 | 参考总价 <strong class="text-green-600">${{ exhibitionCart.reduce((s,x) => s + (x.price||0), 0).toFixed(2) }}</strong></div>
+                                <div class="flex gap-2">
+                                    <button @click="exhibitionCart = []" class="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg">清空</button>
+                                    <button @click="confirmExhibition" class="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold flex items-center gap-1"><i class="fa-solid fa-check"></i> 确认选样 → 生成跟进</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1880,6 +1887,113 @@ ${this.generatedEmailBody}`;
                     navigator.clipboard.writeText(fullText).then(() => {
                         alert('已成功复制邮件主题和正文至剪贴板！');
                     });
+                },
+
+                // ===== 展会/扫码速记 =====
+                addSelectedProductToCart() {
+                    if (!this.exhibitionSelectedSKU) return;
+                    const p = this.products.find(x => x.sku === this.exhibitionSelectedSKU);
+                    if (!p) return;
+                    if (this.exhibitionCart.some(x => x.sku === p.sku)) {
+                        alert('该鞋款已在选样清单中！');
+                        return;
+                    }
+                    this.exhibitionCart.push({ ...p });
+                    this.exhibitionSelectedSKU = '';
+                },
+                toggleCamera() {
+                    if (this.isCameraActive) {
+                        this.stopCamera();
+                    } else {
+                        this.startCamera();
+                    }
+                },
+                startCamera() {
+                    try {
+                        this.html5QrCode = new Html5Qrcode('reader');
+                        this.html5QrCode.start(
+                            { facingMode: 'environment' },
+                            { fps: 10, qrbox: { width: 250, height: 250 } },
+                            (decodedText) => this.onScanSuccess(decodedText),
+                            () => {}
+                        ).then(() => {
+                            this.isCameraActive = true;
+                        }).catch(err => {
+                            alert('无法启动摄像头: ' + (err.message || err));
+                        });
+                    } catch(e) {
+                        alert('扫码组件加载失败: ' + e.message);
+                    }
+                },
+                stopCamera() {
+                    if (this.html5QrCode && this.isCameraActive) {
+                        this.html5QrCode.stop().then(() => {
+                            this.isCameraActive = false;
+                            this.html5QrCode.clear();
+                        }).catch(() => {
+                            this.isCameraActive = false;
+                        });
+                    }
+                },
+                onScanSuccess(decodedText) {
+                    const matchedProduct = this.products.find(p => {
+                        const sku = (p.sku || '').toUpperCase();
+                        return sku === decodedText.toUpperCase() || decodedText.toUpperCase().includes(sku);
+                    });
+                    if (matchedProduct) {
+                        if (this.exhibitionCart.some(x => x.sku === matchedProduct.sku)) {
+                            alert('该鞋款 [' + matchedProduct.sku + '] 已在选样清单中！');
+                        } else {
+                            this.exhibitionCart.push({ ...matchedProduct });
+                            alert('✅ 已添加: ' + matchedProduct.sku + ' - ' + matchedProduct.name);
+                        }
+                    } else {
+                        let skuFromUrl = '';
+                        try {
+                            const url = new URL(decodedText);
+                            skuFromUrl = url.searchParams.get('sku') || '';
+                        } catch(e) {}
+                        if (skuFromUrl) {
+                            const p2 = this.products.find(x => x.sku === skuFromUrl);
+                            if (p2) {
+                                this.exhibitionCart.push({ ...p2 });
+                                alert('✅ 已添加: ' + p2.sku + ' - ' + p2.name);
+                                this.stopCamera();
+                                return;
+                            }
+                        }
+                        alert('未找到匹配的鞋款。扫码内容: ' + decodedText);
+                    }
+                    this.stopCamera();
+                },
+                async confirmExhibition() {
+                    if (this.exhibitionCart.length === 0) return alert('选样清单为空！');
+                    if (!this.exhibitionTargetCustomer) return alert('请先选择意向客户！');
+                    try {
+                        const skuList = this.exhibitionCart.map(x => x.sku).join(', ');
+                        const totalAmount = this.exhibitionCart.reduce((sum, x) => sum + (x.price || 0), 0);
+                        const followupData = {
+                            company: this.exhibitionTargetCustomer,
+                            date: new Date().toISOString().split('T')[0],
+                            channel: '展会现场',
+                            notes: '展会选样清单: ' + skuList + ' | 合计 ' + this.exhibitionCart.length + ' 款，参考总价 $' + totalAmount.toFixed(2),
+                            interest: '高',
+                            sales_rep: this.currentUser.name || '',
+                            status: '进行中',
+                            next_date: '',
+                            action: '跟进展会选样意向'
+                        };
+                        if (this.isDemoMode) {
+                            this.followups.unshift({ id: Date.now(), ...followupData });
+                        } else {
+                            await this.apiFetch('/api/followups', { method: 'POST', body: followupData });
+                        }
+                        alert('✅ 已生成跟进记录！可在【沟通与回访】中查看。');
+                        this.exhibitionCart = [];
+                        this.exhibitionTargetCustomer = '';
+                    } catch(e) {
+                        alert('保存失败: ' + e.message);
+                    }
                 },
 
                 // ===== 公司信息设置 =====
