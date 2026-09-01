@@ -506,16 +506,17 @@
                 </div>
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <table class="w-full text-left text-sm">
-                        <thead class="bg-slate-50 border-b"><tr><th class="p-3">客户/买家</th><th class="p-3">SKU / 款号</th><th class="p-3">FOB单价/总金额</th><th class="p-3">预订数量</th><th class="p-3">快递/单号</th><th class="p-3">状态</th><th class="p-3">操作</th></tr></thead>
+                        <thead class="bg-slate-50 border-b">                            <tr><th class="p-3">客户/买家</th><th class="p-3">日期</th><th class="p-3">SKU / 款号</th><th class="p-3">FOB单价</th><th class="p-3">数量</th><th class="p-3">快递/单号</th><th class="p-3">状态</th><th class="p-3">操作</th></tr></thead>
                         <tbody>
                             <tr v-for="q in quotes" :key="q.id" class="border-b hover:bg-gray-50">
-                                <td class="p-3 font-bold">{{ q.company }}</td>
+                                <td class="p-3 font-bold text-sm">{{ q.company }}</td>
+                                <td class="p-3 text-xs text-gray-500">{{ q.date || '-' }}</td>
                                 <td class="p-3 text-xs font-mono max-w-xs truncate" :title="q.sku">{{ q.sku }}</td>
                                 <td class="p-3 text-emerald-600 font-bold">${{ q.price }}</td>
                                 <td class="p-3 text-xs">{{ q.qty }} 双</td>
                                 <td class="p-3 text-xs text-gray-500">{{ q.express_no || '-' }}</td>
                                 <td class="p-3 text-xs"><span class="bg-teal-50 text-teal-800 font-bold px-2 py-0.5 rounded border border-teal-200">{{ q.status }}</span></td>
-                                <td class="p-3 text-xs space-x-2"><button @click="viewQuoteDetail(q)" class="text-blue-600 hover:underline">查看</button><button @click="deleteQuote(q.id)" class="text-red-600 hover:underline">删除</button></td>
+                                <td class="p-3 text-xs space-x-2"><button @click="viewQuoteDetail(q)" class="text-blue-600 hover:underline">查看</button><button @click="editQuote(q)" class="text-amber-600 hover:underline">编辑</button><button @click="deleteQuote(q.id)" class="text-red-600 hover:underline">删除</button></td>
                             </tr>
                         </tbody>
                     </table>
@@ -1147,7 +1148,7 @@
                     <div v-if="selectedQuoteDetail.feedback"><span class="text-gray-500">反馈/备注</span><p class="text-gray-700 bg-gray-50 p-2 rounded mt-1">{{ selectedQuoteDetail.feedback }}</p></div>
                 </div>
                 <div class="flex justify-end mt-5 pt-3 border-t">
-                    <button @click="showQuoteDetailModal = false" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">关闭</button>
+                    <div class="flex gap-2"><button @click="showQuoteDetailModal = false; editQuote(selectedQuoteDetail)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">编辑</button><button @click="showQuoteDetailModal = false" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">关闭</button></div>
                 </div>
             </div>
         </div>
@@ -1156,14 +1157,17 @@
             <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
                 <h3 class="font-bold text-gray-800 mb-4">新增报价记录</h3>
                 <div class="space-y-3">
-                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">客户 / 买家</label><input type="text" v-model="newQuote.company" placeholder="客户公司名称" class="w-full border p-2 rounded text-xs"></div>
-                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">SKU / 款号</label><input type="text" v-model="newQuote.sku" placeholder="SKU" class="w-full border p-2 rounded text-xs"></div>
-                    <div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-gray-600 mb-1">FOB单价 ($)</label><input type="number" step="0.01" v-model.number="newQuote.price" placeholder="0" class="w-full border p-2 rounded text-xs"></div><div><label class="block text-xs font-semibold text-gray-600 mb-1">预订数量 (双)</label><input type="number" v-model.number="newQuote.qty" placeholder="0" class="w-full border p-2 rounded text-xs"></div></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">客户 / 买家 *</label><select v-model="newQuote.company" class="w-full border p-2 rounded bg-white text-xs"><option value="">-- 选择客户 --</option><option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }} ({{ c.country }})</option></select></div>
+                        <div><label class="block text-xs font-semibold text-gray-600 mb-1">日期</label><input type="date" v-model="newQuote.date" class="w-full border p-2 rounded text-xs"></div>
+                    </div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">SKU / 款号</label><select v-model="newQuote.sku" @change="onQuoteSKUChange" class="w-full border p-2 rounded bg-white text-xs"><option value="">-- 选择鞋款 --</option><option v-for="p in products" :key="p.id" :value="p.sku">{{ p.sku }} - {{ p.name }} (${{ p.price }})</option></select></div>
+                    <div class="grid grid-cols-3 gap-3"><div><label class="block text-xs font-semibold text-gray-600 mb-1">FOB单价 ($)</label><input type="number" step="0.01" v-model.number="newQuote.price" placeholder="0" class="w-full border p-2 rounded text-xs"></div><div><label class="block text-xs font-semibold text-gray-600 mb-1">预订数量 (双)</label><input type="number" v-model.number="newQuote.qty" placeholder="0" class="w-full border p-2 rounded text-xs"></div><div><label class="block text-xs font-semibold text-gray-600 mb-1">总金额 ($)</label><p class="font-bold text-emerald-600 text-lg mt-1">${{ ((newQuote.price || 0) * (newQuote.qty || 0)).toFixed(2) }}</p></div></div>
                     <div><label class="block text-xs font-semibold text-gray-600 mb-1">快递 / 单号</label><input type="text" v-model="newQuote.express_no" placeholder="快递公司 + 运单号" class="w-full border p-2 rounded text-xs"></div>
                     <div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-gray-600 mb-1">状态</label><select v-model="newQuote.status" class="w-full border p-2 rounded text-xs"><option value="已发送报价">已发送报价</option><option value="样品已发送">样品已发送</option><option value="样品已签收">样品已签收</option><option value="已成交">已成交</option><option value="已关闭">已关闭</option></select></div><div><label class="block text-xs font-semibold text-gray-600 mb-1">负责人</label><input type="text" v-model="newQuote.sales_rep" class="w-full border p-2 rounded text-xs"></div></div>
                     <div><label class="block text-xs font-semibold text-gray-600 mb-1">反馈 / 备注</label><textarea v-model="newQuote.feedback" rows="2" placeholder="买家反馈、跟进备注等" class="w-full border p-2 rounded text-xs"></textarea></div>
                 </div>
-                <div class="flex justify-end gap-2 mt-5 pt-3 border-t"><button @click="showQuoteModal = false" class="px-4 py-2 border rounded text-sm">取消</button><button @click="saveQuote()" class="px-4 py-2 bg-blue-600 text-white rounded text-sm">保存</button></div>
+                <div class="flex justify-end gap-2 mt-5 pt-3 border-t"><button @click="showQuoteModal = false" class="px-4 py-2 border rounded text-sm">取消</button><button @click="saveQuote()" class="px-4 py-2 bg-blue-600 text-white rounded text-sm">{{ newQuote.id ? '更新' : '保存' }}</button></div>
             </div>
         </div>
 
@@ -1831,10 +1835,33 @@ Footwear Export Co., Ltd.`;
                 },
                 async deleteFollowup(id) { if (confirm('确定删除吗？')) { this.followups = this.followups.filter(x => x.id !== id); if (!this.isDemoMode) await this.apiFetch('/api/followups/' + id, { method: 'DELETE' }); } },
                 openQuoteModal() { this.newQuote = { company: this.customers[0] ? this.customers[0].company : '', sku: '', price: 0, qty: 0, express_no: '', status: '已发送报价', sales_rep: this.currentUser.name || '', feedback: '', date: new Date().toISOString().split('T')[0] }; this.showQuoteModal = true; },
+                editQuote(q) { this.newQuote = { ...q }; this.showQuoteModal = true; },
+                onQuoteSKUChange() {
+                    const p = this.products.find(x => x.sku === this.newQuote.sku);
+                    if (p) { this.newQuote.price = p.price; }
+                },
                 async saveQuote() {
-                    if (this.isDemoMode) this.quotes.unshift({ id: Date.now(), ...this.newQuote });
-                    else { await this.apiFetch('/api/quotes', { method: 'POST', body: this.newQuote }); await this.fetchAllData(); }
-                    this.showQuoteModal = false;
+                    if (!this.newQuote.company) return alert('请选择客户！');
+                    try {
+                        if (this.isDemoMode) {
+                            if (this.newQuote.id) {
+                                const idx = this.quotes.findIndex(x => x.id === this.newQuote.id);
+                                if (idx >= 0) this.quotes.splice(idx, 1, { ...this.newQuote });
+                            } else {
+                                this.quotes.unshift({ id: Date.now(), ...this.newQuote });
+                            }
+                        } else {
+                            if (this.newQuote.id) {
+                                await this.apiFetch('/api/quotes/' + this.newQuote.id, { method: 'PUT', body: this.newQuote });
+                            } else {
+                                await this.apiFetch('/api/quotes', { method: 'POST', body: this.newQuote });
+                            }
+                            await this.fetchAllData();
+                        }
+                        this.showQuoteModal = false;
+                    } catch(e) {
+                        alert('保存失败: ' + (e.message || '请稍后重试'));
+                    }
                 },
                 viewQuoteDetail(q) {
             this.selectedQuoteDetail = q;

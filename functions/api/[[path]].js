@@ -764,6 +764,19 @@ export async function onRequest(context) {
                 await env.DB.prepare('DELETE FROM quotes WHERE id = ?').bind(id).run();
                 return new Response(JSON.stringify({ success: true }), { headers });
             }
+            if (method === 'PUT') {
+                const b = await getJsonBody();
+                const numId = Number(id);
+                await env.DB.prepare(
+                    'UPDATE quotes SET company=?, date=?, sku=?, price=?, qty=?, express_no=?, status=?, feedback=?, sales_rep=? WHERE id=?'
+                ).bind(
+                    b.company || '', b.date || '', b.sku || '',
+                    Number(b.price) || 0, Number(b.qty) || 0,
+                    b.express_no || '', b.status || '', b.feedback || '',
+                    b.sales_rep || '', numId
+                ).run();
+                return new Response(JSON.stringify({ success: true }), { headers });
+            }
         }
 
         // 8. Products Endpoint
