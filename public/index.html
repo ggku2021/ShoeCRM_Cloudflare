@@ -58,17 +58,17 @@
                     <div class="inline-flex p-3 bg-blue-100 text-blue-600 rounded-full mb-2">
                         <i class="fa-solid fa-shoe-prints text-3xl"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro v6.0</h2>
-                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理 · 电子画册 · 1688/搜鞋网抓取 · 电子PI</p>
+                    <h2 class="text-2xl font-bold text-gray-800">ShoeCRM Pro</h2>
+                    <p class="text-sm text-gray-500 mt-1">鞋类外贸管理系统</p>
                 </div>
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1">账号 / Username</label>
-                        <input type="text" v-model="loginForm.username" placeholder="默认管理员: admin / 业务员: sales1" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                        <input type="text" v-model="loginForm.username" placeholder="请输入账号" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1">密码 / Password</label>
-                        <input type="password" v-model="loginForm.password" placeholder="默认密码: admin123 或 123456" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                        <input type="password" v-model="loginForm.password" placeholder="请输入密码" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     </div>
                     <div v-if="loginError" class="text-red-500 text-xs text-center">{{ loginError }}</div>
                     <button @click="handleLogin" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium shadow transition">
@@ -124,6 +124,9 @@
                 <button @click="openPIModal()" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-emerald-400 hover:bg-slate-800']">
                     <i class="fa-solid fa-file-pdf w-5"></i><span>{{ lang === 'zh' ? '生成外贸PI' : 'Create PI' }}</span>
                 </button>
+                <button @click="showSettingsModal = true" :class="['w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition', showSettingsModal ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800']">
+                    <i class="fa-solid fa-gear w-5"></i><span>{{ lang === 'zh' ? '公司设置' : 'Company Settings' }}</span>
+                </button>
             </nav>
 
             <div class="pt-4 border-t border-slate-700 text-xs text-slate-400 space-y-2">
@@ -136,7 +139,9 @@
                     </button>
                 </div>
                 <div class="flex items-center justify-between px-2 py-1 border-t border-slate-800 pt-2">
-                    <span><i class="fa-solid fa-user-check me-1"></i> {{ currentUser.name }}</span>
+                    <button @click="openProfileModal" class="text-left text-slate-300 hover:text-white flex items-center gap-1">
+                        <i class="fa-solid fa-user-pen me-1"></i> {{ currentUser.name }}
+                    </button>
                     <button @click="logout" class="text-red-400 hover:underline">退出</button>
                 </div>
             </div>
@@ -154,6 +159,9 @@
                 </button>
                 <button @click="currentTab = 'lookbook'" class="text-xs bg-teal-600 text-white px-2 py-1 rounded flex items-center gap-1">
                     <i class="fa-solid fa-images"></i> 画册
+                </button>
+                <button @click="showSettingsModal = true" class="text-xs bg-slate-700 text-white px-2 py-1 rounded flex items-center gap-1">
+                    <i class="fa-solid fa-gear"></i>
                 </button>
                 <button @click="toggleLang" class="text-xs bg-slate-800 px-2 py-1 rounded">
                     {{ lang === 'zh' ? 'EN' : '中' }}
@@ -755,8 +763,10 @@
                             <p class="text-xs text-gray-500">DATE: {{ clientPIForm.date }}</p>
                         </div>
                         <div class="text-right text-xs">
-                            <p class="font-bold text-sm">FOOTWEAR EXPORT CO., LTD.</p>
-                            <p>Jinjiang, Quanzhou, Fujian, China | sales@footwearexport.com</p>
+                            <img v-if="companyInfo.logo" :src="companyInfo.logo" class="h-8 ml-auto mb-1 object-contain">
+                            <p class="font-bold text-sm">{{ companyInfo.name }}</p>
+                            <p>{{ companyInfo.address }}<span v-if="companyInfo.email"> | {{ companyInfo.email }}</span></p>
+                            <p v-if="companyInfo.phone">Tel: {{ companyInfo.phone }}</p>
                         </div>
                     </div>
 
@@ -802,7 +812,7 @@
                         <div class="space-y-1 w-1/2">
                             <p class="font-bold">TERMS & BANK DETAILS:</p>
                             <p>Price Term: FOB XIAMEN / SHENZHEN</p>
-                            <p>Bank: HSBC Hong Kong | Account: FOOTWEAR EXPORT LTD</p>
+                            <p>Bank: {{ companyInfo.bankName }} | Account: {{ companyInfo.bankAccount }}</p>
                         </div>
                         <div class="text-right text-sm">
                             <p class="text-gray-600">Total Quantity: <strong class="text-slate-900">{{ clientPITotalQty }} Pairs</strong></p>
@@ -831,13 +841,24 @@
                 <div id="lookbook-printable" class="p-6 bg-white space-y-6 text-gray-800">
                     <div class="border-b-2 border-slate-900 pb-4 flex justify-between items-end">
                         <div>
-                            <h1 class="text-2xl font-extrabold text-slate-900 tracking-wider">FOOTWEAR COLLECTION LOOKBOOK</h1>
-                            <p class="text-xs text-gray-500">SELECTED PRODUCT CATALOG | DATE: {{ new Date().toISOString().split('T')[0] }}</p>
+                            <h1 v-if="lookbookShowTitle" class="text-2xl font-extrabold text-slate-900 tracking-wider">FOOTWEAR COLLECTION LOOKBOOK</h1>
+                            <p v-if="lookbookShowTitle" class="text-xs text-gray-500">SELECTED PRODUCT CATALOG | DATE: {{ new Date().toISOString().split('T')[0] }}</p>
+                            <p v-if="!lookbookShowTitle" class="text-xs text-gray-500">DATE: {{ new Date().toISOString().split('T')[0] }}</p>
                         </div>
                         <div class="text-right text-xs">
-                            <p class="font-bold text-sm">FOOTWEAR EXPORT CO., LTD.</p>
-                            <p>Jinjiang, Quanzhou, Fujian, China | Email: sales@footwearexport.com</p>
+                            <img v-if="companyInfo.logo" :src="companyInfo.logo" class="h-8 ml-auto mb-1 object-contain">
+                            <p class="font-bold text-sm">{{ companyInfo.name }}</p>
+                            <p>{{ companyInfo.address }}<span v-if="companyInfo.email"> | Email: {{ companyInfo.email }}</span></p>
+                            <p v-if="companyInfo.phone">Tel: {{ companyInfo.phone }}</p>
                         </div>
+                    </div>
+                    <!-- 画册标题开关 -->
+                    <div class="no-print flex items-center gap-2 text-xs text-gray-500 -mt-2">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" v-model="lookbookShowTitle" class="sr-only peer">
+                            <div class="relative w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                            <span class="ml-2">显示/隐藏标题</span>
+                        </label>
                     </div>
 
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
@@ -888,9 +909,11 @@
                             <p class="text-xs text-gray-500">DATE: {{ piForm.date }}</p>
                         </div>
                         <div class="text-right text-xs">
-                            <p class="font-bold text-sm">FOOTWEAR EXPORT CO., LTD.</p>
-                            <p>Jinjiang, Quanzhou, Fujian, China</p>
-                            <p>Email: sales@footwearexport.com</p>
+                            <img v-if="companyInfo.logo" :src="companyInfo.logo" class="h-8 ml-auto mb-1 object-contain">
+                            <p class="font-bold text-sm">{{ companyInfo.name }}</p>
+                            <p>{{ companyInfo.address }}</p>
+                            <p v-if="companyInfo.email">Email: {{ companyInfo.email }}</p>
+                            <p v-if="companyInfo.phone">Tel: {{ companyInfo.phone }}</p>
                         </div>
                     </div>
 
@@ -952,7 +975,7 @@
                     <div class="flex justify-between pt-2 border-t text-xs">
                         <div class="space-y-1">
                             <p class="font-bold">BANK DETAILS FOR PAYMENT:</p>
-                            <p>Bank Name: HSBC Hong Kong | Account Name: FOOTWEAR EXPORT LIMITED</p>
+                            <p>Bank Name: {{ companyInfo.bankName }} | Account Name: {{ companyInfo.bankAccount }}</p>
                         </div>
                         <div class="text-right text-sm">
                             <p class="text-lg font-bold text-emerald-600">TOTAL AMOUNT: ${{ calculatePITotalAmount.toFixed(2) }} USD</p>
@@ -971,10 +994,68 @@
         </div>
 
         <div v-if="showFollowupModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-xl max-w-lg w-full p-6">
-                <h3 class="font-bold text-gray-800 mb-4">添加跟进记录</h3>
-                <input type="text" v-model="newFollowup.notes" placeholder="沟通要点" class="w-full border p-2 rounded text-xs mb-3">
-                <div class="flex justify-end gap-2"><button @click="showFollowupModal = false" class="px-4 py-2 border rounded">取消</button><button @click="saveFollowup()" class="px-4 py-2 bg-blue-600 text-white rounded">保存</button></div>
+            <div class="bg-white rounded-xl max-w-lg w-full p-6 space-y-3">
+                <h3 class="font-bold text-gray-800 mb-2">新增沟通与回访记录</h3>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">客户公司 *</label>
+                    <select v-model="newFollowup.company" class="w-full border p-2 rounded text-xs">
+                        <option value="">选择客户</option>
+                        <option v-for="c in customers" :key="c.id" :value="c.company">{{ c.company }}</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">沟通日期</label>
+                        <input type="date" v-model="newFollowup.date" class="w-full border p-2 rounded text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">沟通渠道</label>
+                        <select v-model="newFollowup.channel" class="w-full border p-2 rounded text-xs">
+                            <option value="WhatsApp">WhatsApp</option>
+                            <option value="邮件">邮件</option>
+                            <option value="电话">电话</option>
+                            <option value="微信">微信</option>
+                            <option value="展会">展会</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">沟通要点与反馈 *</label>
+                    <textarea v-model="newFollowup.notes" rows="3" placeholder="记录沟通内容、客户反馈、需求变化等" class="w-full border p-2 rounded text-xs"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">客户意向</label>
+                        <select v-model="newFollowup.interest" class="w-full border p-2 rounded text-xs">
+                            <option value="高">高</option>
+                            <option value="中">中</option>
+                            <option value="低">低</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">处理状态</label>
+                        <select v-model="newFollowup.status" class="w-full border p-2 rounded text-xs">
+                            <option value="进行中">进行中</option>
+                            <option value="已完成">已完成</option>
+                            <option value="待跟进">待跟进</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">下次跟进日期</label>
+                        <input type="date" v-model="newFollowup.next_date" class="w-full border p-2 rounded text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">下一步行动</label>
+                        <input type="text" v-model="newFollowup.action" placeholder="如: 寄样、报价" class="w-full border p-2 rounded text-xs">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-2 border-t">
+                    <button @click="showFollowupModal = false" class="px-4 py-2 border rounded text-sm">取消</button>
+                    <button @click="saveFollowup()" class="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium">保存</button>
+                </div>
             </div>
         </div>
 
@@ -1076,6 +1157,101 @@
             </div>
         </div>
 
+        <!-- 10. 公司设置弹窗 -->
+        <div v-if="showSettingsModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center border-b pb-3 mb-4">
+                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fa-solid fa-gear text-blue-600"></i> 公司信息设置
+                    </h3>
+                    <button @click="showSettingsModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">公司名称 *</label>
+                        <input type="text" v-model="companyInfo.name" placeholder="FOOTWEAR EXPORT CO., LTD." class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">公司Logo URL</label>
+                        <input type="text" v-model="companyInfo.logo" placeholder="https://... (留空则不显示Logo)" class="w-full border p-2 rounded text-sm">
+                        <img v-if="companyInfo.logo" :src="companyInfo.logo" class="h-12 mt-2 object-contain border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">公司地址</label>
+                        <input type="text" v-model="companyInfo.address" placeholder="Jinjiang, Quanzhou, Fujian, China" class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">联系电话</label>
+                            <input type="text" v-model="companyInfo.phone" placeholder="+86 xxx" class="w-full border p-2 rounded text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">邮箱</label>
+                            <input type="text" v-model="companyInfo.email" placeholder="sales@example.com" class="w-full border p-2 rounded text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">公司网站</label>
+                        <input type="text" v-model="companyInfo.website" placeholder="https://www.example.com" class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div class="border-t pt-4">
+                        <p class="text-xs font-bold text-gray-500 mb-3">🏦 银行信息（用于PI）</p>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">银行名称</label>
+                                <input type="text" v-model="companyInfo.bankName" placeholder="HSBC Hong Kong" class="w-full border p-2 rounded text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">银行账户名</label>
+                                <input type="text" v-model="companyInfo.bankAccount" placeholder="FOOTWEAR EXPORT LTD" class="w-full border p-2 rounded text-sm">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-5 pt-3 border-t">
+                    <button @click="showSettingsModal = false" class="px-4 py-2 border rounded text-sm">取消</button>
+                    <button @click="saveCompanyInfo" class="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium">💾 保存设置</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 11. 用户信息修改弹窗 -->
+        <div v-if="showProfileModal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl max-w-sm w-full p-6 space-y-4">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fa-solid fa-user-pen text-blue-600"></i> 修改用户信息
+                    </h3>
+                    <button @click="showProfileModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">当前用户</label>
+                        <p class="text-sm text-gray-800 font-bold">{{ currentUser.name }} ({{ currentUser.username }})</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">显示名称</label>
+                        <input type="text" v-model="profileForm.name" placeholder="输入新的显示名称" class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">当前密码</label>
+                        <input type="password" v-model="profileForm.password" placeholder="输入当前密码" class="w-full border p-2 rounded text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">新密码 (留空则不修改)</label>
+                        <input type="password" v-model="profileForm.newPassword" placeholder="输入新密码" class="w-full border p-2 rounded text-sm">
+                    </div>
+                </div>
+                <div v-if="profileError" class="text-red-500 text-xs text-center bg-red-50 p-2 rounded">{{ profileError }}</div>
+                <div class="flex justify-end gap-2 pt-2 border-t">
+                    <button @click="showProfileModal = false" class="px-4 py-2 border rounded text-sm">取消</button>
+                    <button @click="saveProfile" class="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium">💾 保存</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -1104,7 +1280,23 @@
                     selectedTemplateKey: 'new_season', templateCustomer: '',
                     piForm: { piNumber: 'PI-' + Math.floor(100000 + Math.random() * 900000), date: new Date().toISOString().split('T')[0], selectedCompany: '', contactInfo: '', showImages: true, items: [] },
                     editingCustomer: {}, newFollowup: {}, newQuote: {}, newProduct: { sku: '', name: '', image_url: '', price: 0, moq: 1000, size_range: '', upper_material: '', sole_material: '', category: '', target_market: '', tags: '' },
-                    customers: [], followups: [], quotes: [], products: []
+                    customers: [], followups: [], quotes: [], products: [],
+                    // ===== 公司信息设置 =====
+                    companyInfo: {
+                        name: 'FOOTWEAR EXPORT CO., LTD.',
+                        logo: '',
+                        address: 'Jinjiang, Quanzhou, Fujian, China',
+                        email: 'sales@footwearexport.com',
+                        phone: '',
+                        website: '',
+                        bankName: 'HSBC Hong Kong',
+                        bankAccount: 'FOOTWEAR EXPORT LTD'
+                    },
+                    showSettingsModal: false,
+                    showProfileModal: false,
+                    profileForm: { name: '', password: '', newPassword: '' },
+                    profileError: '',
+                    lookbookShowTitle: true
                 }
             },
             computed: {
@@ -1266,6 +1458,9 @@ Footwear Export Co., Ltd.`;
                 }
             },
             mounted() {
+                // 加载公司信息
+                this.loadCompanyInfo();
+
                 const urlParams = new URLSearchParams(window.location.search);
                 const isShare = urlParams.has('share') || window.location.hash.includes('catalog');
 
@@ -1548,7 +1743,7 @@ Footwear Export Co., Ltd.`;
                     this.showCustomerModal = false;
                 },
                 async deleteCustomer(id) { if (confirm('确定删除吗？')) { this.customers = this.customers.filter(x => x.id !== id); if (!this.isDemoMode) await this.apiFetch('/api/customers/' + id, { method: 'DELETE' }); } },
-                openFollowupModal() { this.newFollowup = { company: this.customers[0] ? this.customers[0].company : '', notes: '', interest: '中', sales_rep: this.currentUser.name, date: new Date().toISOString().split('T')[0] }; this.showFollowupModal = true; },
+                openFollowupModal() { this.newFollowup = { company: this.customers[0] ? this.customers[0].company : '', notes: '', interest: '中', sales_rep: this.currentUser.name, date: new Date().toISOString().split('T')[0], channel: 'WhatsApp', next_date: '', action: '', status: '进行中' }; this.showFollowupModal = true; },
                 async saveFollowup() {
                     if (this.isDemoMode) this.followups.unshift({ id: Date.now(), ...this.newFollowup });
                     else { await this.apiFetch('/api/followups', { method: 'POST', body: this.newFollowup }); await this.fetchAllData(); }
@@ -1612,6 +1807,54 @@ ${this.generatedEmailBody}`;
                     navigator.clipboard.writeText(fullText).then(() => {
                         alert('已成功复制邮件主题和正文至剪贴板！');
                     });
+                },
+
+                // ===== 公司信息设置 =====
+                loadCompanyInfo() {
+                    try {
+                        const saved = localStorage.getItem('shoecrm_companyInfo');
+                        if (saved) {
+                            const info = JSON.parse(saved);
+                            Object.assign(this.companyInfo, info);
+                        }
+                    } catch(e) {}
+                },
+                saveCompanyInfo() {
+                    localStorage.setItem('shoecrm_companyInfo', JSON.stringify(this.companyInfo));
+                    alert('公司信息已保存！');
+                    this.showSettingsModal = false;
+                },
+
+                // ===== 用户信息修改 =====
+                openProfileModal() {
+                    this.profileForm = { name: this.currentUser.name || '', password: '', newPassword: '' };
+                    this.profileError = '';
+                    this.showProfileModal = true;
+                },
+                async saveProfile() {
+                    this.profileError = '';
+                    if (!this.profileForm.password) { this.profileError = '请输入当前密码'; return; }
+                    try {
+                        const data = await this.apiFetch('/api/user/profile', {
+                            method: 'POST',
+                            body: {
+                                username: this.currentUser.username,
+                                currentPassword: this.profileForm.password,
+                                name: this.profileForm.name,
+                                newPassword: this.profileForm.newPassword || undefined
+                            }
+                        });
+                        if (data && data.success) {
+                            this.currentUser.name = this.profileForm.name;
+                            localStorage.setItem('shoecrm_user', JSON.stringify(this.currentUser));
+                            alert('用户信息已更新！');
+                            this.showProfileModal = false;
+                        } else {
+                            this.profileError = data.error || data.detail || '更新失败';
+                        }
+                    } catch(e) {
+                        this.profileError = e.message || '更新失败';
+                    }
                 }
             }
         }).mount('#app');

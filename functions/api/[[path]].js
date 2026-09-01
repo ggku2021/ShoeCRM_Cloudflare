@@ -596,16 +596,67 @@ export async function onRequest(context) {
         }
 
         // 4. Auth Login Route
+        // Helper: SHA-256 hash
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
         if (path === '/api/auth/login' && method === 'POST') {
             const body = await getJsonBody();
             const { username, password } = body;
-            if ((username === 'admin' || username === 'sales1') && (password === 'admin123' || password === '123456')) {
-                return new Response(JSON.stringify({
-                    token: 'mock-jwt-token-' + Date.now(),
-                    user: { username, name: username === 'admin' ? '张经理 (主管)' : '李业务 (销售)', role: username === 'admin' ? 'admin' : 'sales' }
-                }), { headers });
+            if (!env.DB) {
+                return new Response(JSON.stringify({ detail: '数据库未连接' }), { status: 500, headers });
             }
-            return new Response(JSON.stringify({ detail: '账号或密码错误 (默认账号: admin / 密码: admin123)' }), { status: 400, headers });
+            try {
+                const user = await env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
+                if (!user) {
+                    return new Response(JSON.stringify({ detail: '账号或密码错误' }), { status: 400, headers });
+                }
+                const hash = await sha256(password + user.salt);
+                if (hash !== user.password_hash) {
+                    return new Response(JSON.stringify({ detail: '账号或密码错误' }), { status: 400, headers });
+                }
+                const token = 'token-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+                await env.DB.prepare('INSERT INTO tokens (token, user_id, created_at) VALUES (?, ?, ?)').bind(token, user.id, new Date().toISOString()).run();
+                return new Response(JSON.stringify({
+                    token,
+                    user: { id: user.id, username: user.username, name: user.name, role: user.role }
+                }), { headers });
+            } catch(e) {
+                return new Response(JSON.stringify({ detail: '登录失败: ' + e.message }), { status: 500, headers });
+            }
+        }
+
+        // User profile update
+        if (path === '/api/user/profile' && method === 'POST') {
+            const body = await getJsonBody();
+            const { username, currentPassword, name, newPassword } = body;
+            if (!username || !currentPassword) {
+                return new Response(JSON.stringify({ error: '请填写当前密码' }), { status: 400, headers });
+            }
+            try {
+                const user = await env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
+                if (!user) {
+                    return new Response(JSON.stringify({ error: '用户不存在' }), { status: 404, headers });
+                }
+                const hash = await sha256(currentPassword + user.salt);
+                if (hash !== user.password_hash) {
+                    return new Response(JSON.stringify({ error: '当前密码错误' }), { status: 403, headers });
+                }
+                if (newPassword) {
+                    const newSalt = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
+                    const newHash = await sha256(newPassword + newSalt);
+                    await env.DB.prepare('UPDATE users SET name = ?, password_hash = ?, salt = ? WHERE username = ?').bind(name || user.name, newHash, newSalt, username).run();
+                } else {
+                    await env.DB.prepare('UPDATE users SET name = ? WHERE username = ?').bind(name || user.name, username).run();
+                }
+                return new Response(JSON.stringify({ success: true }), { headers });
+            } catch(e) {
+                return new Response(JSON.stringify({ error: '更新失败: ' + e.message }), { status: 500, headers });
+            }
         }
 
         // Authentication Check for all other protected APIs
@@ -657,11 +708,11 @@ export async function onRequest(context) {
                 const b = await getJsonBody();
                 const res = await env.DB.prepare(
                     `INSERT INTO followups (company, date, channel, notes, interest, next_date, action, status, sales_rep) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 ).bind(
                     b.company || '', b.date || new Date().toISOString().split('T')[0],
                     b.channel || 'WhatsApp', b.notes || '', b.interest || '中',
-                    b.next_date || '', b.action || '', b.status || '进行中', b.sales_rep || '销售员', b.notes || ''
+                    b.next_date || '', b.action || '', b.status || '进行中', b.sales_rep || '销售员'
                 ).run();
                 return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
             }
@@ -685,7 +736,7 @@ export async function onRequest(context) {
                 const b = await getJsonBody();
                 const res = await env.DB.prepare(
                     `INSERT INTO quotes (company, date, sku, price, qty, express_no, status, feedback, sales_rep) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
                 ).bind(
                     b.company || '', b.date || new Date().toISOString().split('T')[0],
                     b.sku || '', Number(b.price) || 0, Number(b.qty) || 1000,
