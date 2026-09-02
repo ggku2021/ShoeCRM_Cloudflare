@@ -519,6 +519,21 @@ export async function onRequest(context) {
                 // Calculate FOB USD ($) based on 7.2 Exchange Rate: e.g. 90 RMB / 7.2 = $12.50
                 const finalUSD = parseFloat((finalRMB / 7.20).toFixed(2));
 
+                // 如果抓取到外部图片URL，尝试下载并保存到R2，避免CDN链接失效
+                let finalImageUrl = image_url;
+                if (finalImageUrl && env.IMAGES && finalImageUrl.startsWith('http')) {
+                    try {
+                        const imgResp = await fetch(finalImageUrl, { redirect: 'follow', signal: AbortSignal.timeout(8000) });
+                        if (imgResp.ok) {
+                            const ext = (finalImageUrl.split('.').pop().split('?')[0] || 'jpg').substring(0, 4);
+                            const key = `products/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+                            const ct = imgResp.headers.get('content-type') || 'image/jpeg';
+                            await env.IMAGES.put(key, await imgResp.arrayBuffer(), { httpMetadata: { contentType: ct } });
+                            finalImageUrl = `/api/images/${key}`;
+                        }
+                    } catch (imgErr) { /* 保存到R2失败，保留原始URL */ }
+                }
+
                 return new Response(JSON.stringify({
                     success: true,
                     product: {
@@ -526,7 +541,7 @@ export async function onRequest(context) {
                         name: name || ('网络抓取鞋款 ' + sku),
                         priceRMB: finalRMB,
                         price: finalUSD,
-                        image_url: image_url,
+                        image_url: finalImageUrl,
                         size_range: sizeRange || '',
                         category: name.includes('拖鞋') ? '凉拖鞋' : (name.includes('帆布') ? '休闲鞋' : '跑鞋'),
                         upper_material: name.includes('飞织') ? '透气飞织' : (name.includes('皮') ? '头层牛皮/PU' : '网布'),
@@ -564,6 +579,54 @@ export async function onRequest(context) {
                 } catch(err) {
                     return new Response(JSON.stringify([]), { headers });
                 }
+            }
+        }
+
+        // 2b. 图片上传到 R2 存储
+        if (path === '/api/upload' && method === 'POST') {
+            if (!env.IMAGES) {
+                return new Response(JSON.stringify({ error: 'R2 bucket 未绑定' }), { status: 500, headers });
+            }
+            try {
+                const contentType = request.headers.get('content-type') || '';
+                if (!contentType.includes('multipart/form-data')) {
+                    return new Response(JSON.stringify({ error: '请使用 multipart/form-data 上传' }), { status: 400, headers });
+                }
+                const formData = await request.formData();
+                const file = formData.get('file');
+                if (!file) return new Response(JSON.stringify({ error: '未选择文件' }), { status: 400, headers });
+
+                const ext = file.name.split('.').pop() || 'jpg';
+                const ts = Date.now();
+                const rand = Math.random().toString(36).slice(2, 8);
+                const key = `products/${ts}-${rand}.${ext}`;
+
+                await env.IMAGES.put(key, file, {
+                    httpMetadata: { contentType: file.type || 'image/jpeg' }
+                });
+
+                const url = `/api/images/${key}`;
+                return new Response(JSON.stringify({ success: true, url, key }), { headers });
+            } catch (e) {
+                return new Response(JSON.stringify({ error: '上传失败: ' + e.message }), { status: 500, headers });
+            }
+        }
+
+        // 2c. 图片代理 - 从 R2 读取图片并返回
+        if (path.startsWith('/api/images/') && method === 'GET') {
+            if (!env.IMAGES) {
+                return new Response('R2 not configured', { status: 500 });
+            }
+            const key = path.replace('/api/images/', '');
+            try {
+                const obj = await env.IMAGES.get(key);
+                if (!obj) return new Response('Not found', { status: 404 });
+                const headers2 = new Headers();
+                headers2.set('Content-Type', obj.httpMetadata?.contentType || 'image/jpeg');
+                headers2.set('Cache-Control', 'public, max-age=31536000, immutable');
+                return new Response(obj.body, { headers: headers2 });
+            } catch (e) {
+                return new Response('Error: ' + e.message, { status: 500 });
             }
         }
 

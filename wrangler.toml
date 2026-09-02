@@ -5,3 +5,7 @@ pages_build_output_dir = "./public"
 binding = "DB"
 database_name = "shoecrm-db"
 database_id = "ff28dddc-412e-4f70-be0b-a05dd08dfdd4"
+
+[[r2_buckets]]
+bucket_name = "shoecrm-images"
+binding = "IMAGES"
