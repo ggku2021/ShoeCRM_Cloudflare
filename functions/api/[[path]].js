@@ -523,7 +523,7 @@ export async function onRequest(context) {
                 let finalImageUrl = image_url;
                 if (finalImageUrl && env.IMAGES && finalImageUrl.startsWith('http')) {
                     try {
-                        const imgResp = await fetch(finalImageUrl, { redirect: 'follow', signal: AbortSignal.timeout(8000) });
+                        const imgResp = await fetch(finalImageUrl, { redirect: 'follow', signal: AbortSignal.timeout(10000), headers: { 'Referer': 'https://photo.yupoo.com/', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' } });
                         if (imgResp.ok) {
                             const ext = (finalImageUrl.split('.').pop().split('?')[0] || 'jpg').substring(0, 4);
                             const key = `products/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
@@ -643,7 +643,7 @@ export async function onRequest(context) {
                     const url = p.image_url;
                     if (!url || url.startsWith('/api/images/') || url.startsWith('data:')) { skip++; continue; }
                     try {
-                        const imgResp = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(10000) });
+                        const imgResp = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(15000), headers: { 'Referer': 'https://photo.yupoo.com/', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' } });
                         if (!imgResp.ok) { fail++; log.push(`${p.sku}: HTTP ${imgResp.status}`); continue; }
                         const ext = (url.split('.').pop().split('?')[0] || 'jpg').substring(0, 4).toLowerCase();
                         if (ext.length > 4 || ext.length < 2) { /* not an extension */ }
