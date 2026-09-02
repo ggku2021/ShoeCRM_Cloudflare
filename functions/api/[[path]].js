@@ -630,6 +630,39 @@ export async function onRequest(context) {
             }
         }
 
+        // 2d. 批量迁移外部图片到 R2（免 Auth）
+        if (path === '/api/migrate-images' && (method === 'POST' || method === 'GET')) {
+            if (!env.DB || !env.IMAGES) {
+                return new Response(JSON.stringify({ error: 'DB 或 R2 未绑定' }), { status: 500, headers });
+            }
+            try {
+                const { results } = await env.DB.prepare('SELECT id, sku, image_url FROM products WHERE image_url IS NOT NULL AND image_url != \'\' AND image_url NOT LIKE \'/api/images/%\'').all();
+                const log = [];
+                let success = 0, fail = 0, skip = 0;
+                for (const p of results) {
+                    const url = p.image_url;
+                    if (!url || url.startsWith('/api/images/') || url.startsWith('data:')) { skip++; continue; }
+                    try {
+                        const imgResp = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(10000) });
+                        if (!imgResp.ok) { fail++; log.push(`${p.sku}: HTTP ${imgResp.status}`); continue; }
+                        const ext = (url.split('.').pop().split('?')[0] || 'jpg').substring(0, 4).toLowerCase();
+                        if (ext.length > 4 || ext.length < 2) { /* not an extension */ }
+                        const key = `products/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext || 'jpg'}`;
+                        const ct = imgResp.headers.get('content-type') || 'image/jpeg';
+                        const buf = await imgResp.arrayBuffer();
+                        await env.IMAGES.put(key, buf, { httpMetadata: { contentType: ct } });
+                        const newUrl = `/api/images/${key}`;
+                        await env.DB.prepare('UPDATE products SET image_url = ? WHERE id = ?').bind(newUrl, p.id).run();
+                        success++;
+                        log.push(`${p.sku}: OK -> ${key}`);
+                    } catch (e) { fail++; log.push(`${p.sku}: ${e.message}`); }
+                }
+                return new Response(JSON.stringify({ total: results.length, success, fail, skip, log }), { headers });
+            } catch (e) {
+                return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
+            }
+        }
+
         // 3. 买家自主选款 PI 报价单提交接口 (免 Auth Token)
         if (path === '/api/public/quotes' && method === 'POST') {
             const b = await getJsonBody();
