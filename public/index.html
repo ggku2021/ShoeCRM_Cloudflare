@@ -300,7 +300,7 @@
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                     <div v-for="p in filteredLookbookProducts" :key="p.id" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition group cursor-pointer" @click="previewImage(p)">
                         <div class="relative aspect-square w-full bg-slate-100 overflow-hidden">
-                            <img :src="p.image_url || 'https://via.placeholder.com/400x400?text=No+Image'" @error="handleImageError" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <img :src="p.image_url || productFallbackImage(p.sku, p.name)" @error="$event.target.src=productFallbackImage(p.sku, p.name)" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
                             <button v-if="!isPublicCatalogMode" @click.stop="toggleLookbookSelection(p.sku)" :class="['absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center transition shadow text-xs', isLookbookSelected(p.sku) ? 'bg-teal-500 text-white' : 'bg-white/90 text-teal-600']"><i class="fa-solid fa-check"></i></button>
                             <button v-else @click.stop="toggleClientCart(p)" :class="['absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold shadow transition', isClientCartSelected(p.sku) ? 'bg-teal-500 text-white' : 'bg-white/90 text-teal-600']"><i class="fa-solid" :class="isClientCartSelected(p.sku) ? 'fa-check' : 'fa-plus'"></i></button>
                         </div>
@@ -551,7 +551,7 @@
 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                     <div v-for="p in filteredProducts" :key="p.id" :class="['bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition group', selectedProductIds.includes(p.id) ? 'border-blue-400 ring-1 ring-blue-300' : 'border-gray-100']">
                         <div class="relative aspect-square w-full bg-gray-100 overflow-hidden cursor-pointer" @click="previewImage(p)">
-                            <img :src="p.image_url || 'https://via.placeholder.com/400x400?text=No+Image'" @error="handleImageError" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <img :src="p.image_url || productFallbackImage(p.sku, p.name)" @error="$event.target.src=productFallbackImage(p.sku, p.name)" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
                             <label class="absolute top-2 left-2 flex items-center gap-1.5 bg-white/90 rounded-full px-2.5 py-1.5 border shadow-sm cursor-pointer z-10" @click.stop>
                                 <input type="checkbox" :value="p.id" v-model="selectedProductIds" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                 <span class="text-[10px] font-mono font-semibold text-gray-700">{{ p.sku }}</span>
@@ -1559,10 +1559,20 @@ Footwear Export Co., Ltd.`;
                     const rate = this.calcPricing.exchangeRate || 7.20;
                     this.scrapedProduct.price = parseFloat((rmb / rate).toFixed(2));
                 },
+                productFallbackImage(sku, name) {
+                    const s = String(sku || '') + String(name || '');
+                    let hash = 0;
+                    for (let i = 0; i < s.length; i++) { hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0; }
+                    const hue = Math.abs(hash) % 360;
+                    const bg = `hsl(${hue}, 40%, 92%)`;
+                    const border = `hsl(${hue}, 50%, 75%)`;
+                    const text = `hsl(${hue}, 60%, 35%)`;
+                    const label = sku || 'No Image';
+                    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><rect width='400' height='400' fill='${bg}'/><rect x='8' y='8' width='384' height='384' rx='16' fill='none' stroke='${border}' stroke-width='3'/><text x='200' y='180' text-anchor='middle' font-size='48'>👟</text><text x='200' y='230' text-anchor='middle' font-family='monospace' font-size='18' font-weight='bold' fill='${text}'>${label}</text><text x='200' y='270' text-anchor='middle' font-size='13' fill='${border}'>暂无商品图片</text></svg>`;
+                    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+                },
                 handleImageError(e) {
-                    if (e && e.target) {
-                        e.target.src = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400';
-                    }
+                    // 不做任何处理，使用 HTML 中已有的 fallback
                 },
                 async submitClientPI() {
                     if (!this.clientPIForm.company) {

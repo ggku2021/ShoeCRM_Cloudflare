@@ -340,9 +340,8 @@ export async function onRequest(context) {
                     } else if (image_url.startsWith('/')) {
                         image_url = 'https://www.sooxie.com' + image_url;
                     }
-                } else {
-                    image_url = 'https://images.xiecdn.com/jinchen/texqjl2b6rdgrswajxh9fyqlmdrwdmko.jpg';
                 }
+                // image_url 留空，前端会基于SKU生成唯一SVG占位图
 
                 // 2. Price Extraction: Priority 1 - Match JS variable: var price="90.00"
                 const jsPriceMatch = html.match(/var\s+price\s*=\s*["']([\d\.]+)["']/i);
