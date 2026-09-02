@@ -300,7 +300,7 @@
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                     <div v-for="p in filteredLookbookProducts" :key="p.id" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition group cursor-pointer" @click="previewImage(p)">
                         <div class="relative aspect-square w-full bg-slate-100 overflow-hidden">
-                            <img :src="p.image_url || productFallbackImage(p)" @error="$event.target.src=productFallbackImage(p)" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <img :src="p.image_url || 'https://via.placeholder.com/400x400?text=No+Image'" @error="handleImageError" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
                             <button v-if="!isPublicCatalogMode" @click.stop="toggleLookbookSelection(p.sku)" :class="['absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center transition shadow text-xs', isLookbookSelected(p.sku) ? 'bg-teal-500 text-white' : 'bg-white/90 text-teal-600']"><i class="fa-solid fa-check"></i></button>
                             <button v-else @click.stop="toggleClientCart(p)" :class="['absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold shadow transition', isClientCartSelected(p.sku) ? 'bg-teal-500 text-white' : 'bg-white/90 text-teal-600']"><i class="fa-solid" :class="isClientCartSelected(p.sku) ? 'fa-check' : 'fa-plus'"></i></button>
                         </div>
@@ -424,7 +424,7 @@
                             <div class="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                                 <div v-for="(item, idx) in exhibitionCart" :key="idx" class="flex items-center justify-between p-3 border rounded-lg bg-slate-50">
                                     <div class="flex items-center gap-3">
-                                        <img :src="item.image_url || productFallbackImage(item)" @error="$event.target.src=productFallbackImage(item)" class="w-12 h-12 object-cover rounded">
+                                        <img :src="item.image_url" class="w-12 h-12 object-cover rounded">
                                         <div><p class="font-bold text-sm">{{ item.name }} ({{ item.sku }})</p><p class="text-xs text-gray-500">${{ item.price }} /双</p></div>
                                     </div>
                                     <button @click="exhibitionCart.splice(idx, 1)" class="text-red-500 text-sm"><i class="fa-solid fa-trash"></i></button>
@@ -551,7 +551,7 @@
 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                     <div v-for="p in filteredProducts" :key="p.id" :class="['bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition group', selectedProductIds.includes(p.id) ? 'border-blue-400 ring-1 ring-blue-300' : 'border-gray-100']">
                         <div class="relative aspect-square w-full bg-gray-100 overflow-hidden cursor-pointer" @click="previewImage(p)">
-                            <img :src="p.image_url || productFallbackImage(p)" @error="$event.target.src=productFallbackImage(p)" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <img :src="p.image_url || 'https://via.placeholder.com/400x400?text=No+Image'" @error="handleImageError" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
                             <label class="absolute top-2 left-2 flex items-center gap-1.5 bg-white/90 rounded-full px-2.5 py-1.5 border shadow-sm cursor-pointer z-10" @click.stop>
                                 <input type="checkbox" :value="p.id" v-model="selectedProductIds" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                 <span class="text-[10px] font-mono font-semibold text-gray-700">{{ p.sku }}</span>
@@ -713,7 +713,7 @@
                     </div>
                     <div v-if="scrapedProduct.name || scrapedProduct.sku" class="bg-orange-50/60 border border-orange-200 p-4 rounded-xl space-y-3">
                         <div class="flex gap-3">
-                            <img :src="scrapedProduct.image_url || productFallbackImage(scrapedProduct)" @error="$event.target.src=productFallbackImage(scrapedProduct)" class="w-24 h-24 object-cover rounded border bg-white">
+                            <img :src="scrapedProduct.image_url" class="w-24 h-24 object-cover rounded border bg-white" @error="handleImageError">
                             <div class="flex-1 space-y-2">
                                 <div>
                                     <label class="block text-gray-500 font-medium text-[10px]">鞋款名称 / 标题</label>
@@ -806,7 +806,7 @@
                         </thead>
                         <tbody>
                             <tr v-for="(item, idx) in clientCart" :key="idx" class="border">
-                                <td class="border border-gray-300 p-1 text-center"><img :src="item.image_url || productFallbackImage(item)" @error="$event.target.src=productFallbackImage(item)" class="w-12 h-12 object-cover rounded mx-auto"></td>
+                                <td class="border border-gray-300 p-1 text-center"><img :src="item.image_url || 'https://via.placeholder.com/60?text=No+Pic'" class="w-12 h-12 object-cover rounded mx-auto"></td>
                                 <td class="border border-gray-300 p-2 font-mono font-bold">{{ item.sku }}</td>
                                 <td class="border border-gray-300 p-2">{{ item.name }}</td>
                                 <td class="border border-gray-300 p-2 text-right"><input type="number" v-model.number="item.qty" class="w-20 border text-right p-1 rounded no-print"><span class="hidden print:inline font-bold">{{ item.qty }}</span></td>
@@ -873,7 +873,7 @@
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
                         <div v-for="sku in lookbookSelectedSKUs" :key="sku" class="border rounded-xl p-3 space-y-2 bg-white flex flex-col justify-between">
                             <div v-if="getProductBySKU(sku)">
-                                <img :src="getProductBySKU(sku).image_url || productFallbackImage(getProductBySKU(sku))" @error="$event.target.src=productFallbackImage(getProductBySKU(sku))" class="w-full h-44 object-cover rounded-lg mb-2">
+                                <img :src="getProductBySKU(sku).image_url" class="w-full h-44 object-cover rounded-lg mb-2">
                                 <span class="text-xs font-mono font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{{ sku }}</span>
                                 <h4 class="font-bold text-sm text-gray-800 mt-1">{{ getProductBySKU(sku).name }}</h4>
                                 <div class="text-[11px] text-gray-500 space-y-0.5 mt-1">
@@ -968,7 +968,7 @@
                         </thead>
                         <tbody>
                             <tr v-for="(item, idx) in piForm.items" :key="idx">
-                                <td v-if="piForm.showImages" class="border p-1 text-center"><img :src="item.image_url || productFallbackImage(item)" @error="$event.target.src=productFallbackImage(item)" class="w-12 h-12 object-cover mx-auto rounded"></td>
+                                <td v-if="piForm.showImages" class="border p-1 text-center"><img :src="item.image_url || 'https://via.placeholder.com/60?text=No+Pic'" class="w-12 h-12 object-cover mx-auto rounded"></td>
                                 <td class="border p-2"><input type="text" v-model="item.sku" class="w-full border-none text-xs font-bold font-mono"></td>
                                 <td class="border p-2"><input type="text" v-model="item.desc" class="w-full border-none text-xs"></td>
                                 <td class="border p-2 text-right"><input type="number" v-model.number="item.qty" class="w-20 text-right border-none text-xs"></td>
@@ -1201,7 +1201,7 @@
 
         <div v-if="previewProductModal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50" @click="previewProductModal = false">
             <div class="max-w-3xl w-full bg-white rounded-2xl p-4 relative" @click.stop>
-                <img :src="previewProductData.image_url || productFallbackImage(previewProductData)" @error="$event.target.src=productFallbackImage(previewProductData)" class="w-full max-h-[70vh] object-contain rounded-lg">
+                <img :src="previewProductData.image_url" class="w-full max-h-[70vh] object-contain rounded-lg">
             </div>
         </div>
 
@@ -1560,17 +1560,9 @@ Footwear Export Co., Ltd.`;
                     this.scrapedProduct.price = parseFloat((rmb / rate).toFixed(2));
                 },
                 handleImageError(e) {
-                    // 不再用统一的fallback，让onerror inline处理
-                },
-                productFallbackImage(p) {
-                    const sku = (p.sku || 'N/A').substring(0, 16);
-                    const name = (p.name || '').substring(0, 20);
-                    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
-                    let hash = 0;
-                    for (let i = 0; i < sku.length; i++) hash = ((hash << 5) - hash + sku.charCodeAt(i)) | 0;
-                    const color = colors[Math.abs(hash) % colors.length];
-                    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><rect width='400' height='400' fill='${color}12'/><rect x='4' y='4' width='392' height='392' fill='none' stroke='${color}' stroke-width='3' rx='12' stroke-dasharray='8 4'/><text x='200' y='155' text-anchor='middle' font-size='52'>👟</text><text x='200' y='210' text-anchor='middle' font-family='monospace' font-size='20' font-weight='bold' fill='${color}'>${sku}</text><text x='200' y='248' text-anchor='middle' font-family='sans-serif' font-size='14' fill='#666'>${name}</text><text x='200' y='340' text-anchor='middle' font-family='sans-serif' font-size='11' fill='#aaa'>暂无商品图片</text></svg>`;
-                    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+                    if (e && e.target) {
+                        e.target.src = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400';
+                    }
                 },
                 async submitClientPI() {
                     if (!this.clientPIForm.company) {
@@ -1674,7 +1666,7 @@ Footwear Export Co., Ltd.`;
                     let name = '抓取鞋款 ' + sku;
                     if (this.scraperUrl.includes('1688')) sku = '1688-' + Math.floor(100000 + Math.random() * 900000);
                     else if (this.scraperUrl.includes('sooxie')) sku = 'SOOXIE-' + Math.floor(100000 + Math.random() * 900000);
-                    this.scrapedProduct = { sku, name, priceRMB: 90.0, price: 12.5, image_url: '', category: '跑鞋', upper_material: '透气飞织', sole_material: 'MD+橡胶底', moq: 1000, target_market: '通用外贸', tags: '一键抓取' };
+                    this.scrapedProduct = { sku, name, priceRMB: 90.0, price: 12.5, image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400', category: '跑鞋', upper_material: '透气飞织', sole_material: 'MD+橡胶底', moq: 1000, target_market: '通用外贸', tags: '一键抓取' };
                 },
                 async saveScrapedProduct() {
                     if (!this.scrapedProduct.name || !this.scrapedProduct.sku) return alert('请检查抓取商品信息！');
