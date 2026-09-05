@@ -739,6 +739,10 @@
                             <label class="block text-gray-500 font-medium text-[10px]">抓取到的主图链接 URL (可检查或人工微调修改)</label>
                             <input type="text" v-model="scrapedProduct.image_url" class="w-full border p-1.5 rounded text-xs font-mono bg-white">
                         </div>
+                        <div v-if="scrapedProduct.source_url" class="space-y-1">
+                            <label class="block text-gray-500 font-medium text-[10px]">来源链接</label>
+                            <a :href="scrapedProduct.source_url" target="_blank" class="block w-full border p-1.5 rounded text-xs font-mono bg-blue-50 text-blue-700 hover:text-blue-900 truncate" :title="scrapedProduct.source_url">{{ scrapedProduct.source_url }}</a>
+                        </div>
                         <button @click="saveScrapedProduct" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow">确认保存至系统鞋款库</button>
                     </div>
                 </div>
@@ -1208,6 +1212,7 @@
                         <div><label class="block text-xs font-semibold text-gray-600 mb-1">目标市场</label><input type="text" v-model="newProduct.target_market" placeholder="如 通用外贸" class="w-full border p-2 rounded text-xs"></div>
                     </div>
                     <div><label class="block text-xs font-semibold text-gray-600 mb-1">标签</label><input type="text" v-model="newProduct.tags" placeholder="如 热销, 新款" class="w-full border p-2 rounded text-xs"></div>
+                    <div v-if="newProduct.source_url"><label class="block text-xs font-semibold text-gray-600 mb-1">来源链接</label><a :href="newProduct.source_url" target="_blank" class="block w-full border p-2 rounded text-xs font-mono bg-blue-50 text-blue-700 hover:text-blue-900 truncate" :title="newProduct.source_url">{{ newProduct.source_url }}</a></div>
                 </div>
                 <div class="flex justify-end gap-2 mt-5 pt-3 border-t"><button @click="showProductModal = false" class="px-4 py-2 border rounded text-sm">取消</button><button @click="saveProduct" class="px-4 py-2 bg-blue-600 text-white rounded text-sm">保存</button></div>
             </div>
@@ -1215,7 +1220,12 @@
 
         <div v-if="previewProductModal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50" @click="previewProductModal = false">
             <div class="max-w-3xl w-full bg-white rounded-2xl p-4 relative" @click.stop>
-                <img :src="previewProductData.image_url" class="w-full max-h-[70vh] object-contain rounded-lg">
+                <button @click="previewProductModal = false" class="absolute top-3 right-3 w-8 h-8 bg-black/20 hover:bg-black/40 text-white rounded-full flex items-center justify-center text-sm z-10">×</button>
+                <img :src="previewProductData.image_url || productFallbackImage(previewProductData.sku, previewProductData.name)" @error="handleImageError" class="w-full max-h-[70vh] object-contain rounded-lg">
+                <div v-if="previewProductData.source_url" class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p class="text-xs text-gray-500 mb-1"><i class="fa-solid fa-link text-blue-500"></i> 来源链接</p>
+                    <a :href="previewProductData.source_url" target="_blank" class="text-xs font-mono text-blue-700 hover:text-blue-900 break-all">{{ previewProductData.source_url }}</a>
+                </div>
             </div>
         </div>
 
@@ -1360,7 +1370,7 @@
                     calcBox: { length: 60, width: 40, height: 35, pairsPerCarton: 12, totalCartons: 100 },
                     selectedTemplateKey: 'new_season', templateCustomer: '',
                     piForm: { piNumber: 'PI-' + Math.floor(100000 + Math.random() * 900000), date: new Date().toISOString().split('T')[0], selectedCompany: '', contactInfo: '', showImages: true, items: [] },
-                    editingCustomer: {}, newFollowup: {}, newQuote: {}, newProduct: { sku: '', name: '', image_url: '', price: 0, moq: 1000, size_range: '', upper_material: '', sole_material: '', category: '', target_market: '', tags: '' },
+                    editingCustomer: {}, newFollowup: {}, newQuote: {}, newProduct: { sku: '', name: '', image_url: '', source_url: '', price: 0, moq: 1000, size_range: '', upper_material: '', sole_material: '', category: '', target_market: '', tags: '' },
                     customers: [], followups: [], quotes: [], products: [],
                     // ===== 公司信息设置 =====
                     companyInfo: {
@@ -1690,7 +1700,7 @@ Footwear Export Co., Ltd.`;
                     let name = '抓取鞋款 ' + sku;
                     if (this.scraperUrl.includes('1688')) sku = '1688-' + Math.floor(100000 + Math.random() * 900000);
                     else if (this.scraperUrl.includes('sooxie')) sku = 'SOOXIE-' + Math.floor(100000 + Math.random() * 900000);
-                    this.scrapedProduct = { sku, name, priceRMB: 90.0, price: 12.5, image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400', category: '跑鞋', upper_material: '透气飞织', sole_material: 'MD+橡胶底', moq: 1000, target_market: '通用外贸', tags: '一键抓取' };
+                    this.scrapedProduct = { sku, name, priceRMB: 90.0, price: 12.5, image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400', category: '跑鞋', upper_material: '透气飞织', sole_material: 'MD+橡胶底', moq: 1000, target_market: '通用外贸', tags: '一键抓取', source_url: this.scraperUrl || '' };
                 },
                 async saveScrapedProduct() {
                     if (!this.scrapedProduct.name || !this.scrapedProduct.sku) return alert('请检查抓取商品信息！');
@@ -1896,7 +1906,7 @@ Footwear Export Co., Ltd.`;
             this.showQuoteDetailModal = true;
         },
         async deleteQuote(id) { if (confirm('确定删除吗？')) { this.quotes = this.quotes.filter(x => x.id !== id); if (!this.isDemoMode) await this.apiFetch('/api/quotes/' + id, { method: 'DELETE' }); } },
-                openProductModal(p = null) { if (p) this.newProduct = JSON.parse(JSON.stringify(p)); else this.newProduct = { id: null, sku: 'SKU-', name: '', image_url: '', price: 0, moq: 1000 }; this.showProductModal = true; },
+                openProductModal(p = null) { if (p) this.newProduct = JSON.parse(JSON.stringify(p)); else this.newProduct = { id: null, sku: 'SKU-', name: '', image_url: '', source_url: '', price: 0, moq: 1000 }; this.showProductModal = true; },
                 async uploadProductImage(e) {
                     const file = e.target.files[0];
                     if (!file) return;
