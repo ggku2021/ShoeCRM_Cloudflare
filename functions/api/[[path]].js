@@ -875,6 +875,75 @@ export async function onRequest(context) {
             }
         }
 
+        // 7b. PI Records Endpoint
+        if (path === '/api/pi-records') {
+            // Auto-migrate
+            if (env.DB) await env.DB.prepare("ALTER TABLE pi_records ADD COLUMN pi_number TEXT DEFAULT ''").run().catch(() => {});
+            if (env.DB) await env.DB.prepare("ALTER TABLE pi_records ADD COLUMN date TEXT DEFAULT ''").run().catch(() => {});
+            if (env.DB) await env.DB.prepare("ALTER TABLE pi_records ADD COLUMN company TEXT DEFAULT ''").run().catch(() => {});
+            if (env.DB) await env.DB.prepare("ALTER TABLE pi_records ADD COLUMN contact_info TEXT DEFAULT ''").run().catch(() => {});
+            if (env.DB) await env.DB.prepare("ALTER TABLE pi_records ADD COLUMN lang TEXT DEFAULT 'en'").run().catch(() => {});
+            if (env.DB) await env.DB.prepare("ALTER TABLE pi_records ADD COLUMN currency TEXT DEFAULT 'USD'").run().catch(() => {});
+            if (env.DB) await env.DB.prepare("ALTER TABLE pi_records ADD COLUMN terms TEXT DEFAULT ''").run().catch(() => {});
+            if (env.DB) await env.DB.prepare("ALTER TABLE pi_records ADD COLUMN items TEXT DEFAULT '[]'").run().catch(() => {});
+            if (env.DB) await env.DB.prepare("ALTER TABLE pi_records ADD COLUMN sales_rep TEXT DEFAULT ''").run().catch(() => {});
+            if (env.DB) await env.DB.prepare("ALTER TABLE pi_records ADD COLUMN status TEXT DEFAULT 'draft'").run().catch(() => {});
+
+            // Create table if not exists
+            await env.DB.prepare(`CREATE TABLE IF NOT EXISTS pi_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pi_number TEXT, date TEXT, company TEXT, contact_info TEXT,
+                lang TEXT, currency TEXT, terms TEXT, items TEXT,
+                sales_rep TEXT, status TEXT, created_at TEXT DEFAULT (datetime('now'))
+            )`).run().catch(() => {});
+
+            if (method === 'GET') {
+                const { results } = await env.DB.prepare('SELECT * FROM pi_records ORDER BY id DESC').all();
+                return new Response(JSON.stringify(results || []), { headers });
+            }
+            if (method === 'POST') {
+                const b = await getJsonBody();
+                const res = await env.DB.prepare(
+                    `INSERT INTO pi_records (pi_number, date, company, contact_info, lang, currency, terms, items, sales_rep, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                ).bind(
+                    b.pi_number || '', b.date || new Date().toISOString().split('T')[0],
+                    b.company || '', b.contact_info || '',
+                    b.lang || 'en', b.currency || 'USD',
+                    b.terms || '', JSON.stringify(b.items || []),
+                    b.sales_rep || '', b.status || 'draft'
+                ).run();
+                return new Response(JSON.stringify({ success: true, id: res.meta.last_row_id }), { headers });
+            }
+        }
+
+        if (path.startsWith('/api/pi-records/')) {
+            const id = path.split('/')[3];
+            if (method === 'GET') {
+                const { results } = await env.DB.prepare('SELECT * FROM pi_records WHERE id = ?').bind(id).all();
+                if (!results || results.length === 0) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers });
+                const rec = results[0];
+                try { rec.items = JSON.parse(rec.items || '[]'); } catch(e) { rec.items = []; }
+                return new Response(JSON.stringify(rec), { headers });
+            }
+            if (method === 'PUT') {
+                const b = await getJsonBody();
+                await env.DB.prepare(
+                    `UPDATE pi_records SET pi_number=?, date=?, company=?, contact_info=?, lang=?, currency=?, terms=?, items=?, sales_rep=?, status=? WHERE id=?`
+                ).bind(
+                    b.pi_number || '', b.date || '', b.company || '',
+                    b.contact_info || '', b.lang || 'en', b.currency || 'USD',
+                    b.terms || '', JSON.stringify(b.items || []),
+                    b.sales_rep || '', b.status || 'draft', Number(id)
+                ).run();
+                return new Response(JSON.stringify({ success: true }), { headers });
+            }
+            if (method === 'DELETE') {
+                await env.DB.prepare('DELETE FROM pi_records WHERE id = ?').bind(id).run();
+                return new Response(JSON.stringify({ success: true }), { headers });
+            }
+        }
+
         // 8. Products Endpoint
         if (path === '/api/products') {
             // Auto-migrate: ensure columns exist
