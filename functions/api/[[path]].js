@@ -568,13 +568,13 @@ export async function onRequest(context) {
             }
             try {
                 const { results } = await env.DB.prepare(
-                    'SELECT id, sku, name, category, price, image_url, upper_material, sole_material, moq, target_market, tags FROM products ORDER BY id DESC'
+                    'SELECT id, sku, name, category, price, image_url, upper_material, sole_material, moq, target_market, tags, source_url FROM products ORDER BY id DESC'
                 ).all();
                 return new Response(JSON.stringify(results || []), { headers });
             } catch (e) {
                 try {
                     const { results } = await env.DB.prepare(
-                        'SELECT id, sku, name, category, price, upper_material, sole_material, moq, target_market, tags, image_url FROM products ORDER BY id DESC'
+                        'SELECT id, sku, name, category, price, upper_material, sole_material, moq, target_market, tags, image_url, source_url FROM products ORDER BY id DESC'
                     ).all();
                     return new Response(JSON.stringify(results || []), { headers });
                 } catch(err) {
@@ -885,7 +885,7 @@ export async function onRequest(context) {
                     const { results } = await env.DB.prepare('SELECT * FROM products ORDER BY id DESC').all();
                     return new Response(JSON.stringify(results || []), { headers });
                 } catch (e) {
-                    const { results } = await env.DB.prepare('SELECT id, sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url, size_range FROM products ORDER BY id DESC').all();
+                    const { results } = await env.DB.prepare('SELECT id, sku, name, category, upper_material, sole_material, price, moq, target_market, tags, image_url, size_range, source_url FROM products ORDER BY id DESC').all();
                     return new Response(JSON.stringify(results || []), { headers });
                 }
             }
@@ -964,6 +964,19 @@ export async function onRequest(context) {
                     await env.DB.prepare('DELETE FROM products WHERE sku = ?').bind(param).run();
                 }
                 return new Response(JSON.stringify({ success: true }), { headers });
+            }
+        }
+
+        // 10. 单品来源链接回填
+        if (path === '/api/products/source-url' && method === 'POST') {
+            try {
+                const b = await request.json();
+                const { sku, source_url } = b;
+                if (!sku || !source_url) return new Response(JSON.stringify({ error: '需要 sku 和 source_url' }), { status: 400, headers });
+                await env.DB.prepare('UPDATE products SET source_url = ? WHERE sku = ?').bind(source_url, sku).run();
+                return new Response(JSON.stringify({ success: true, sku, source_url }), { headers });
+            } catch (e) {
+                return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
             }
         }
 
