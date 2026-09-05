@@ -1708,6 +1708,7 @@ Footwear Export Co., Ltd.`;
                 },
                 async saveScrapedProduct() {
                     if (!this.scrapedProduct.name || !this.scrapedProduct.sku) return alert('请检查抓取商品信息！');
+                    if (!this.scrapedProduct.source_url && this.scraperUrl) this.scrapedProduct.source_url = this.scraperUrl;
                     try {
                         if (!this.isDemoMode) {
                             const res = await this.apiFetch('/api/products', { method: 'POST', body: this.scrapedProduct });
