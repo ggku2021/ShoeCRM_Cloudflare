@@ -278,6 +278,9 @@
                             <div class="relative w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-amber-500"></div>
                             <span class="ml-2"><i class="fa-solid fa-eye-slash me-1"></i> 隐藏价格</span>
                         </label>
+                        <button v-if="!isPublicCatalogMode && lookbookSelectedSKUs.length > 0" @click="batchGeneratePIFromLookbook" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-file-invoice"></i> 一键生成PI ({{ lookbookSelectedSKUs.length }}款)
+                        </button>
                         <button v-if="!isPublicCatalogMode" @click="openSelectedLookbookModal" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
                             <i class="fa-solid fa-file-pdf"></i> 生成 PDF 画册
                         </button>
@@ -545,6 +548,7 @@
                             <input type="checkbox" @change="toggleSelectAll" :checked="selectedProductIds.length === filteredProducts.length && filteredProducts.length > 0" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                             <span>全选 ({{ selectedProductIds.length }}/{{ filteredProducts.length }})</span>
                         </label>
+                        <button v-if="selectedProductIds.length > 0" @click="batchGeneratePIFromProducts" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 whitespace-nowrap shadow-sm"><i class="fa-solid fa-file-invoice"></i> 一键生成PI ({{ selectedProductIds.length }}款)</button>
                         <button v-if="selectedProductIds.length > 0" @click="batchDelete" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 whitespace-nowrap"><i class="fa-solid fa-trash"></i> 删除选中({{ selectedProductIds.length }})</button>
                     </div>
                 </div>
@@ -1842,6 +1846,26 @@ Footwear Export Co., Ltd.`;
                 },
                 printLookbook() { window.print(); },
                 getProductBySKU(sku) { return this.products.find(x => x.sku === sku); },
+                batchGeneratePIFromProducts() {
+                    const selected = this.products.filter(p => this.selectedProductIds.includes(p.id));
+                    if (selected.length === 0) return this.showToast('请先勾选要生成PI的商品', 'warning');
+                    this.piForm.items = selected.map(p => ({
+                        sku: p.sku, desc: p.name + ' (' + (p.upper_material || '') + '/' + (p.sole_material || '') + ')',
+                        qty: p.moq || 100, price: p.price, image_url: p.image_url
+                    }));
+                    this.showPIModal = true;
+                    this.showToast('已将 ' + selected.length + ' 款商品添加到PI', 'success');
+                },
+                batchGeneratePIFromLookbook() {
+                    const selected = this.products.filter(p => this.lookbookSelectedSKUs.includes(p.sku));
+                    if (selected.length === 0) return this.showToast('请先在画册中勾选要生成PI的商品', 'warning');
+                    this.piForm.items = selected.map(p => ({
+                        sku: p.sku, desc: p.name + ' (' + (p.upper_material || '') + '/' + (p.sole_material || '') + ')',
+                        qty: p.moq || 100, price: p.price, image_url: p.image_url
+                    }));
+                    this.showPIModal = true;
+                    this.showToast('已将 ' + selected.length + ' 款商品添加到PI', 'success');
+                },
                 openPIWithSingleProduct(p) {
                     this.piForm.items = [{ sku: p.sku, desc: p.name + ' (' + (p.upper_material || '') + '/' + (p.sole_material || '') + ')', qty: p.moq || 100, price: p.price, image_url: p.image_url }];
                     this.showPIModal = true;
