@@ -1212,7 +1212,11 @@
                         <div><label class="block text-xs font-semibold text-gray-600 mb-1">目标市场</label><input type="text" v-model="newProduct.target_market" placeholder="如 通用外贸" class="w-full border p-2 rounded text-xs"></div>
                     </div>
                     <div><label class="block text-xs font-semibold text-gray-600 mb-1">标签</label><input type="text" v-model="newProduct.tags" placeholder="如 热销, 新款" class="w-full border p-2 rounded text-xs"></div>
-                    <div v-if="newProduct.source_url"><label class="block text-xs font-semibold text-gray-600 mb-1">来源链接</label><a :href="newProduct.source_url" target="_blank" class="block w-full border p-2 rounded text-xs font-mono bg-blue-50 text-blue-700 hover:text-blue-900 truncate" :title="newProduct.source_url">{{ newProduct.source_url }}</a></div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">来源链接</label>
+                        <input type="text" v-model="newProduct.source_url" placeholder="如 https://1688.com/... 或 https://sooxie.com/..." class="w-full border p-2 rounded text-xs font-mono">
+                        <a v-if="newProduct.source_url" :href="newProduct.source_url" target="_blank" class="text-[10px] text-blue-600 hover:underline mt-1 inline-block"><i class="fa-solid fa-external-link-alt"></i> 在新窗口打开</a>
+                    </div>
                 </div>
                 <div class="flex justify-end gap-2 mt-5 pt-3 border-t"><button @click="showProductModal = false" class="px-4 py-2 border rounded text-sm">取消</button><button @click="saveProduct" class="px-4 py-2 bg-blue-600 text-white rounded text-sm">保存</button></div>
             </div>
